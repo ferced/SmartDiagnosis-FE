@@ -15,7 +15,7 @@ import Logo from 'src/components/logo';
 
 // ----------------------------------------------------------------------
 
-const METHODS = [];
+const METHODS: any[] = [];
 
 type Props = {
   title?: string;
