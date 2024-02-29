@@ -2,7 +2,6 @@ import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
-import { useTheme } from '@mui/material/styles';
 
 import { RouterLink } from 'src/routes/components';
 
@@ -25,8 +24,6 @@ type Props = {
 
 export default function AuthClassicLayout({ children, image, title }: Props) {
   const { method } = useAuthContext();
-
-  const theme = useTheme();
 
   const mdUp = useResponsive('up', 'md');
 

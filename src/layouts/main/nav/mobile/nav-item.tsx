@@ -1,7 +1,6 @@
 import { m } from 'framer-motion';
 import { forwardRef } from 'react';
 
-import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
 import Link, { LinkProps } from '@mui/material/Link';
 import CardActionArea from '@mui/material/CardActionArea';

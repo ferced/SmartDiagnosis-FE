@@ -21,7 +21,7 @@ import { useAuthContext } from 'src/auth/hooks';
 import { PATH_AFTER_LOGIN } from 'src/config-global';
 
 import Iconify from 'src/components/iconify';
-import FormProvider, { RHFTextField } from 'src/components/hook-form';
+import { RHFTextField } from 'src/components/hook-form';
 
 // ----------------------------------------------------------------------
 
@@ -72,9 +72,10 @@ export default function AmplifyLoginView() {
   });
 
   return (
-    <Stack spacing={2} sx={{ marginRight: '700px !important' }}> {/* Utilizamos !important para anular los estilos heredados */}
+    <Stack spacing={2} sx={{ marginRight: '700px !important' }}>
+      {' '}
+      {/* Utilizamos !important para anular los estilos heredados */}
       <Typography variant="h4">Sign in to Minimal</Typography>
-
       <Stack direction="row" spacing={0.5}>
         <Typography variant="body2">New user?</Typography>
 
@@ -82,9 +83,7 @@ export default function AmplifyLoginView() {
           Create an account
         </Link>
       </Stack>
-
       <RHFTextField name="email" label="Email address" />
-
       <RHFTextField
         name="password"
         label="Password"
@@ -99,7 +98,6 @@ export default function AmplifyLoginView() {
           ),
         }}
       />
-
       <Link
         component={RouterLink}
         href={paths.auth.amplify.forgotPassword}
@@ -110,7 +108,6 @@ export default function AmplifyLoginView() {
       >
         Forgot password?
       </Link>
-
       <LoadingButton
         fullWidth
         color="inherit"
@@ -122,7 +119,6 @@ export default function AmplifyLoginView() {
       >
         Login
       </LoadingButton>
-
       {!!errorMsg && (
         <Alert severity="error" sx={{ mt: 3 }}>
           {errorMsg}
