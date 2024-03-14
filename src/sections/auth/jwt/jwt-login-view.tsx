@@ -45,7 +45,7 @@ export default function JwtLoginView() {
 
   const defaultValues = {
     email: 'admin@ferced.com',
-    password: 'demo1234',
+    password: 'demo12345',
   };
 
   const methods = useForm({

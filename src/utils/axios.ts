@@ -50,4 +50,7 @@ export const endpoints = {
     details: '/api/product/details',
     search: '/api/product/search',
   },
+  diagnosis: {
+    submitDiagnosis: '/api/diagnosis/submit',
+  },
 };

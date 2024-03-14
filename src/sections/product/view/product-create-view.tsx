@@ -5,7 +5,7 @@ import { paths } from 'src/routes/paths';
 import { useSettingsContext } from 'src/components/settings';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 
-import ProductNewEditForm from '../product-new-edit-form';
+import PatientForm from './patient-form-view';
 
 // ----------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ export default function ProductCreateView() {
         }}
       />
 
-      <ProductNewEditForm />
+      <PatientForm />
     </Container>
   );
 }

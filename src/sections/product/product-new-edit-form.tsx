@@ -168,7 +168,7 @@ export default function ProductNewEditForm({ currentProduct }: Props) {
               <RHFUpload
                 multiple
                 thumbnail
-                name="images"
+                name="patient_history"
                 maxSize={3145728}
                 onDrop={handleDrop}
                 onRemove={handleRemoveFile}
@@ -186,12 +186,6 @@ export default function ProductNewEditForm({ currentProduct }: Props) {
     <FormProvider methods={methods} onSubmit={onSubmit}>
       <Grid container spacing={3}>
         {renderDetails}
-
-        {/* {renderProperties}
-
-        {renderPricing}
-
-        {renderActions} */}
       </Grid>
     </FormProvider>
   );
