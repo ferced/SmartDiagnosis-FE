@@ -26,31 +26,31 @@ export const fetcher = async (args: string | [string, AxiosRequestConfig]) => {
 // ----------------------------------------------------------------------
 
 export const endpoints = {
-  chat: '/api/chat',
-  kanban: '/api/kanban',
-  calendar: '/api/calendar',
+  chat: '/chat',
+  kanban: '/kanban',
+  calendar: '/calendar',
   auth: {
-    me: '/api/auth/me',
-    login: '/api/auth/login',
-    register: '/api/auth/register',
+    me: '/auth/me',
+    login: '/auth/login',
+    register: '/auth/register',
   },
   mail: {
-    list: '/api/mail/list',
-    details: '/api/mail/details',
-    labels: '/api/mail/labels',
+    list: '/mail/list',
+    details: '/mail/details',
+    labels: '/mail/labels',
   },
   post: {
-    list: '/api/post/list',
-    details: '/api/post/details',
-    latest: '/api/post/latest',
-    search: '/api/post/search',
+    list: '/post/list',
+    details: '/post/details',
+    latest: '/post/latest',
+    search: '/post/search',
   },
   product: {
-    list: '/api/product/list',
-    details: '/api/product/details',
-    search: '/api/product/search',
+    list: '/product/list',
+    details: '/product/details',
+    search: '/product/search',
   },
   diagnosis: {
-    submitDiagnosis: '/api/diagnosis/submit',
+    submitDiagnosis: '/diagnosis/submit',
   },
 };

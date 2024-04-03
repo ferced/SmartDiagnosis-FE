@@ -1,19 +1,14 @@
+import axios from 'axios';
 import * as Yup from 'yup';
+import { useState, SetStateAction } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Grid from '@mui/material/Unstable_Grid2';
-import { Healing, Assignment, Announcement } from '@mui/icons-material'; // Note: Check the actual import path in your project
 import CardHeader from '@mui/material/CardHeader';
-
-import { useRouter } from 'src/routes/hooks'; // Adjust according to your actual import paths
-
-import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form'; // Adjust imports as needed
-import axios from 'axios';
-import { useState } from 'react';
-
+import { Healing, Assignment, Announcement } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -21,6 +16,8 @@ import {
   Divider,
   MenuItem,
   useTheme,
+  Collapse,
+  TextField,
   InputLabel,
   Typography,
   FormControl,
@@ -28,12 +25,34 @@ import {
   CircularProgress,
 } from '@mui/material';
 
+import { useRouter } from 'src/routes/hooks';
+
+import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form';
+
 // ----------------------------------------------------------------------
 
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [responseDetails, setResponseDetails] = useState({});
+  const [askInputShown, setAskInputShown] = useState(false);
+
+  const [question, setQuestion] = useState('');
+
+  const handleAskNowClick = () => {
+    setAskInputShown((prev) => !prev);
+  };
+
+  const handleQuestionChange = (event: { target: { value: SetStateAction<string> } }) => {
+    setQuestion(event.target.value);
+  };
+
+  const handleSubmitQuestion = () => {
+    console.log('Question Submitted:', question);
+    // Here you would typically send the question to your backend or handle it as needed
+    setAskInputShown(false); // Optionally hide the input and button after submission
+    setQuestion(''); // Clear the question input field
+  };
   const router = useRouter();
 
   // Define a more appropriate schema for a patient form
@@ -66,7 +85,6 @@ export default function PatientForm() {
       allergies: 'Penicillin',
       gender: '',
       currentMedications: 'Occasional ibuprofen for joint pain',
-      files: [], // This would be replaced with actual File objects in a real application
     },
   });
 
@@ -74,38 +92,30 @@ export default function PatientForm() {
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     console.log('Patient Details:', data);
+
     setIsLoading(true);
 
-    // Retrieve the token from sessionStorage
     const token = sessionStorage.getItem('accessToken');
 
     if (!token) {
       console.error('No access token found in sessionStorage');
       setIsLoading(false);
-      return; // Exit the function if there is no token
+      return;
     }
 
     try {
-      // Convert form data to a format suitable for your backend, if necessary
       const formattedData = {
         ...data,
         patientName: data.patientName,
-        // Include other data transformations here
       };
 
-      // Make a POST request to the server
-      const response = await axios.post(
-        'http://127.0.0.1:5000/api/diagnosis/submit',
-        formattedData,
-        {
-          headers: {
-            // Include the authorization header with the token
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.post('http://127.0.0.1:3000/diagnosis/submit', formattedData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      console.log(response.data); // Log the response data from the server
+      console.log(response.data);
       setResponseDetails(response.data);
       setIsLoading(false);
       setResponseReceived(true);
@@ -135,15 +145,9 @@ export default function PatientForm() {
               render={({ field }) => (
                 <FormControl fullWidth variant="outlined">
                   <InputLabel id="gender-label">Gender</InputLabel>
-                  <Select
-                    {...field}
-                    labelId="gender-label"
-                    label="Gender" // This prop is necessary for the outlined variant to calculate the space for the label correctly.
-                    defaultValue="" // Default value can also be managed by React Hook Form.
-                  >
+                  <Select {...field} labelId="gender-label" label="Gender" defaultValue="">
                     <MenuItem value="male">Male</MenuItem>
                     <MenuItem value="female">Female</MenuItem>
-                    {/* Add more options as necessary */}
                   </Select>
                 </FormControl>
               )}
@@ -154,13 +158,7 @@ export default function PatientForm() {
             <RHFTextField name="allergies" label="Allergies" />
             <RHFTextField name="currentMedications" label="Current Medications" />
 
-            {/* Attachments for medical reports or files */}
-            <RHFUpload
-              multiple
-              thumbnail
-              name="files"
-              // Add the rest of your upload logic here
-            />
+            <RHFUpload multiple thumbnail name="files" />
           </Stack>
         </Card>
       </Grid>
@@ -172,7 +170,7 @@ export default function PatientForm() {
         type="submit"
         variant="contained"
         color="primary"
-        disabled={isLoading} // Disable the button while loading
+        disabled={isLoading}
         sx={{
           borderRadius: 2,
           padding: '10px 30px',
@@ -193,7 +191,17 @@ export default function PatientForm() {
     const theme = useTheme();
 
     return (
-      <Card raised sx={{ maxWidth: 600, mx: 'auto', mt: 5 }}>
+      <Card
+        raised
+        sx={{
+          maxWidth: 600,
+          mx: 'auto',
+          mt: 5,
+          bgcolor: theme.palette.background.paper,
+          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+        }}
+      >
         <CardHeader
           title="Diagnosis Results"
           subheader=" "
@@ -237,6 +245,93 @@ export default function PatientForm() {
     );
   };
 
+  const renderFollowUpPrompt = () => {
+    const theme = useTheme();
+
+    return (
+      <Box
+        sx={{
+          mt: 4,
+          py: 3,
+          px: 2,
+          bgcolor: theme.palette.background.paper,
+          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          textAlign: 'center',
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{ mb: 2, fontWeight: 'medium', color: theme.palette.text.primary }}
+        >
+          Got More Questions?
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 3, color: theme.palette.text.secondary }}>
+          If you have any more questions or need further clarification, don't hesitate to ask.
+        </Typography>
+        <Collapse in={!askInputShown}>
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{
+              borderRadius: '20px',
+              textTransform: 'none',
+              px: 4,
+              py: '6px',
+              boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+              ':hover': {
+                boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
+              },
+            }}
+            onClick={handleAskNowClick}
+          >
+            Ask Now
+          </Button>
+        </Collapse>
+        <Collapse in={askInputShown}>
+          <Box
+            sx={{
+              mt: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <TextField
+              variant="outlined"
+              value={question}
+              onChange={handleQuestionChange}
+              placeholder="Type your question here..."
+              sx={{
+                width: '100%',
+                maxWidth: '600px',
+                mr: 1,
+              }}
+              autoFocus
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmitQuestion}
+              sx={{
+                borderRadius: '20px',
+                textTransform: 'none',
+                px: 2,
+                py: '6px',
+                boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+                ':hover': {
+                  boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
+                },
+              }}
+            >
+              Submit
+            </Button>
+          </Box>
+        </Collapse>
+      </Box>
+    );
+  };
+
   return (
     <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
       {!responseReceived ? (
@@ -245,7 +340,10 @@ export default function PatientForm() {
           {renderSubmitButton}
         </>
       ) : (
-        renderResponseDetails(responseDetails)
+        <>
+          {renderResponseDetails(responseDetails)}
+          {renderFollowUpPrompt()} {/* Call the follow-up prompt here */}
+        </>
       )}
     </FormProvider>
   );
