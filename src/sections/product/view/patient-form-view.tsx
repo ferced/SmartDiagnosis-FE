@@ -194,7 +194,7 @@ export default function PatientForm() {
       <Card
         raised
         sx={{
-          maxWidth: 600,
+          maxWidth: '100%',
           mx: 'auto',
           mt: 5,
           bgcolor: theme.palette.background.paper,
