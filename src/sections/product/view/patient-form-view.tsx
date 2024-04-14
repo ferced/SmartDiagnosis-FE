@@ -27,6 +27,8 @@ import {
 
 import { useRouter } from 'src/routes/hooks';
 
+import { HOST_API } from 'src/config-global';
+
 import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form';
 
 // ----------------------------------------------------------------------
@@ -109,7 +111,7 @@ export default function PatientForm() {
         patientName: data.patientName,
       };
 
-      const response = await axios.post('http://127.0.0.1:3000/diagnosis/submit', formattedData, {
+      const response = await axios.post(`${HOST_API}/diagnosis/submit`, formattedData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
