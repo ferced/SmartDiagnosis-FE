@@ -25,7 +25,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import { useRouter } from 'src/routes/hooks';
+import { HOST_API } from 'src/config-global';
 
 import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form';
 
@@ -36,7 +36,7 @@ export default function PatientForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [responseDetails, setResponseDetails] = useState({});
   const [askInputShown, setAskInputShown] = useState(false);
-
+  const theme = useTheme();
   const [question, setQuestion] = useState('');
 
   const handleAskNowClick = () => {
@@ -53,7 +53,6 @@ export default function PatientForm() {
     setAskInputShown(false); // Optionally hide the input and button after submission
     setQuestion(''); // Clear the question input field
   };
-  const router = useRouter();
 
   // Define a more appropriate schema for a patient form
   const PatientSchema = Yup.object().shape({
@@ -78,7 +77,7 @@ export default function PatientForm() {
 
   });
 
-  const { reset, handleSubmit, setValue, watch } = methods;
+  const { reset } = methods;
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     console.log('Patient Details:', data);
@@ -99,7 +98,7 @@ export default function PatientForm() {
         patientName: data.patientName,
       };
 
-      const response = await axios.post('http://127.0.0.1:3000/diagnosis/submit', formattedData, {
+      const response = await axios.post(`${HOST_API}/diagnosis/submit`, formattedData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -177,150 +176,142 @@ export default function PatientForm() {
     </Stack>
   );
 
-  const renderResponseDetails = (details: any) => {
-    const theme = useTheme();
-
-    return (
-      <Card
-        raised
+  const renderResponseDetails = (details: any) => (
+    <Card
+      raised
+      sx={{
+        maxWidth: '100%',
+        mx: 'auto',
+        mt: 5,
+        bgcolor: theme.palette.background.paper,
+        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+      }}
+    >
+      <CardHeader
+        title="Diagnosis Results"
+        subheader=" "
+        titleTypographyProps={{ align: 'center', variant: 'h4' }}
+        subheaderTypographyProps={{ align: 'center' }}
         sx={{
-          maxWidth: '100%',
-          mx: 'auto',
-          mt: 5,
-          bgcolor: theme.palette.background.paper,
-          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.common.white,
+          paddingBottom: 3,
         }}
+      />
+      <CardContent>
+        <Box display="flex" alignItems="center" my={2}>
+          <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
+          <Typography variant="h6">Diagnosis</Typography>
+        </Box>
+        <Typography paragraph sx={{ ml: 4 }}>
+          {details.diagnosis}
+        </Typography>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box display="flex" alignItems="center" my={2}>
+          <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+          <Typography variant="h6">Treatment</Typography>
+        </Box>
+        <Typography paragraph sx={{ ml: 4 }}>
+          {details.treatment}
+        </Typography>
+        <Divider sx={{ my: 2 }} />
+
+        <Box display="flex" alignItems="center" my={2}>
+          <Announcement sx={{ color: theme.palette.warning.main, mr: 2 }} />
+          <Typography variant="h6">Disclaimer</Typography>
+        </Box>
+        <Typography paragraph sx={{ ml: 4 }}>
+          {details.disclaimer}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+
+  const renderFollowUpPrompt = () => (
+    <Box
+      sx={{
+        mt: 4,
+        py: 3,
+        px: 2,
+        bgcolor: theme.palette.background.paper,
+        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}
+    >
+      <Typography
+        variant="h5"
+        sx={{ mb: 2, fontWeight: 'medium', color: theme.palette.text.primary }}
       >
-        <CardHeader
-          title="Diagnosis Results"
-          subheader=" "
-          titleTypographyProps={{ align: 'center', variant: 'h4' }}
-          subheaderTypographyProps={{ align: 'center' }}
+        Got More Questions?
+      </Typography>
+      <Typography variant="body1" sx={{ mb: 3, color: theme.palette.text.secondary }}>
+        If you have any more questions or need further clarification, don&apos;t hesitate to ask.
+      </Typography>
+      <Collapse in={!askInputShown}>
+        <Button
+          variant="contained"
+          color="primary"
           sx={{
-            backgroundColor: theme.palette.primary.main,
-            color: theme.palette.common.white,
-            paddingBottom: 3,
+            borderRadius: '20px',
+            textTransform: 'none',
+            px: 4,
+            py: '6px',
+            boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+            ':hover': {
+              boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
+            },
           }}
-        />
-        <CardContent>
-          <Box display="flex" alignItems="center" my={2}>
-            <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-            <Typography variant="h6">Diagnosis</Typography>
-          </Box>
-          <Typography paragraph sx={{ ml: 4 }}>
-            {details.diagnosis}
-          </Typography>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Box display="flex" alignItems="center" my={2}>
-            <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-            <Typography variant="h6">Treatment</Typography>
-          </Box>
-          <Typography paragraph sx={{ ml: 4 }}>
-            {details.treatment}
-          </Typography>
-          <Divider sx={{ my: 2 }} />
-
-          <Box display="flex" alignItems="center" my={2}>
-            <Announcement sx={{ color: theme.palette.warning.main, mr: 2 }} />
-            <Typography variant="h6">Disclaimer</Typography>
-          </Box>
-          <Typography paragraph sx={{ ml: 4 }}>
-            {details.disclaimer}
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderFollowUpPrompt = () => {
-    const theme = useTheme();
-
-    return (
-      <Box
-        sx={{
-          mt: 4,
-          py: 3,
-          px: 2,
-          bgcolor: theme.palette.background.paper,
-          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          textAlign: 'center',
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{ mb: 2, fontWeight: 'medium', color: theme.palette.text.primary }}
+          onClick={handleAskNowClick}
         >
-          Got More Questions?
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 3, color: theme.palette.text.secondary }}>
-          If you have any more questions or need further clarification, don't hesitate to ask.
-        </Typography>
-        <Collapse in={!askInputShown}>
+          Ask Now
+        </Button>
+      </Collapse>
+      <Collapse in={askInputShown}>
+        <Box
+          sx={{
+            mt: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <TextField
+            variant="outlined"
+            value={question}
+            onChange={handleQuestionChange}
+            placeholder="Type your question here..."
+            sx={{
+              width: '100%',
+              maxWidth: '600px',
+              mr: 1,
+            }}
+            autoFocus
+          />
           <Button
             variant="contained"
             color="primary"
+            onClick={handleSubmitQuestion}
             sx={{
               borderRadius: '20px',
               textTransform: 'none',
-              px: 4,
+              px: 2,
               py: '6px',
               boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
               ':hover': {
                 boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
               },
             }}
-            onClick={handleAskNowClick}
           >
-            Ask Now
+            Submit
           </Button>
-        </Collapse>
-        <Collapse in={askInputShown}>
-          <Box
-            sx={{
-              mt: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <TextField
-              variant="outlined"
-              value={question}
-              onChange={handleQuestionChange}
-              placeholder="Type your question here..."
-              sx={{
-                width: '100%',
-                maxWidth: '600px',
-                mr: 1,
-              }}
-              autoFocus
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmitQuestion}
-              sx={{
-                borderRadius: '20px',
-                textTransform: 'none',
-                px: 2,
-                py: '6px',
-                boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-                ':hover': {
-                  boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
-                },
-              }}
-            >
-              Submit
-            </Button>
-          </Box>
-        </Collapse>
-      </Box>
-    );
-  };
+        </Box>
+      </Collapse>
+    </Box>
+  );
 
   return (
     <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>

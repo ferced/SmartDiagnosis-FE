@@ -44,8 +44,8 @@ export default function JwtLoginView() {
   });
 
   const defaultValues = {
-    email: 'admin@ferced.com',
-    password: 'demo12345',
+    email: '',
+    password: '',
   };
 
   const methods = useForm({
