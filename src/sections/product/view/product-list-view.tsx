@@ -49,22 +49,8 @@ import {
 // ----------------------------------------------------------------------
 
 const PUBLISH_OPTIONS = [
-  {
-    value: 'under 18',
-    label: 'Under 18',
-  },
-  {
-    value: '18 to 25',
-    label: '18 to 25',
-  },
-  {
-    value: '25 to 45',
-    label: '25 to 45',
-  },
-  {
-    value: 'over 45',
-    label: 'over 45',
-  },
+  { value: '', label: 'lalo' },
+  { value: 'draft', label: 'Draft' },
 ];
 
 const defaultFilters: IProductTableFilters = {
@@ -253,14 +239,14 @@ export default function ProductListView() {
         }}
       >
         <CustomBreadcrumbs
-          heading="List"
+          heading="Patient List"
           links={[
-            { name: 'Dashboard', href: paths.dashboard.root },
+            // { name: 'Dashboard', href: paths.dashboard.root },
             {
               name: 'Diagnosis',
               href: paths.dashboard.product.root,
             },
-            { name: 'List' },
+            // { name: 'List' },
           ]}
           action={
             <Button

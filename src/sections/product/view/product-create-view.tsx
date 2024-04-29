@@ -18,10 +18,6 @@ export default function ProductCreateView() {
         heading="Ask for a diagnosis"
         links={[
           {
-            name: 'Dashboard',
-            href: paths.dashboard.root,
-          },
-          {
             name: 'Diagnosis',
             href: paths.dashboard.product.root,
           },
