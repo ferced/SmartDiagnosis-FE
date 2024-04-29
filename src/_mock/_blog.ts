@@ -1,11 +1,19 @@
 export const POST_PUBLISH_OPTIONS = [
   {
-    value: 'published',
-    label: 'Published',
+    value: 'under 18',
+    label: 'Under 18',
   },
   {
-    value: 'draft',
-    label: 'Draft',
+    value: '18 to 25',
+    label: '18 to 25',
+  },
+  {
+    value: '25 to 45',
+    label: '25 to 45',
+  },
+  {
+    value: 'over 45',
+    label: 'over 45',
   },
 ];
 

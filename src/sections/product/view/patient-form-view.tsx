@@ -75,17 +75,7 @@ export default function PatientForm() {
   // Your form initialization and usage logic follows
   const methods = useForm({
     resolver: yupResolver(PatientSchema),
-    defaultValues: {
-      patientName: 'Alex Johnson',
-      age: 29,
-      symptoms:
-        'Fatigue, intermittent joint pains, and occasional headaches. Recently noticed a circular rash.',
-      medicalHistory:
-        'Reported tick bite during a camping trip last summer, frequent outdoor activities. Previous episodes of unexplained fatigue and mild fevers over the past few months.',
-      allergies: 'Penicillin',
-      gender: '',
-      currentMedications: 'Occasional ibuprofen for joint pain',
-    },
+
   });
 
   const { reset, handleSubmit, setValue, watch } = methods;
@@ -154,7 +144,7 @@ export default function PatientForm() {
             />
 
             <RHFTextField name="symptoms" label="Symptoms" multiline rows={4} />
-            <RHFTextField name="medicalHistory" label="Medical History" multiline rows={4} />
+            <RHFTextField name="medicalHistory" label="Medical History" multiline rows={7} />
             <RHFTextField name="allergies" label="Allergies" />
             <RHFTextField name="currentMedications" label="Current Medications" />
 

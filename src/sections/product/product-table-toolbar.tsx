@@ -71,7 +71,7 @@ export default function ProductTableToolbar({
           width: { xs: 1, md: 200 },
         }}
       >
-        <InputLabel>Stock</InputLabel>
+        <InputLabel>Gender</InputLabel>
 
         <Select
           multiple
@@ -97,7 +97,7 @@ export default function ProductTableToolbar({
           width: { xs: 1, md: 200 },
         }}
       >
-        <InputLabel>Publish</InputLabel>
+        <InputLabel>Age</InputLabel>
 
         <Select
           multiple
