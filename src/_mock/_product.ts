@@ -47,19 +47,27 @@ export const PRODUCT_SIZE_OPTIONS = [
 ];
 
 export const PRODUCT_STOCK_OPTIONS = [
-  { value: 'in stock', label: 'In stock' },
-  { value: 'low stock', label: 'Low stock' },
-  { value: 'out of stock', label: 'Out of stock' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  
 ];
 
 export const PRODUCT_PUBLISH_OPTIONS = [
   {
-    value: 'published',
-    label: 'Published',
+    value: 'under 18',
+    label: 'Under 18',
   },
   {
-    value: 'draft',
-    label: 'Draft',
+    value: '18 to 25',
+    label: '18 to 25',
+  },
+  {
+    value: '25 to 45',
+    label: '25 to 45',
+  },
+  {
+    value: 'over 45',
+    label: 'over 45',
   },
 ];
 

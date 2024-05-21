@@ -49,8 +49,22 @@ import {
 // ----------------------------------------------------------------------
 
 const PUBLISH_OPTIONS = [
-  { value: 'published', label: 'Published' },
-  { value: 'draft', label: 'Draft' },
+  {
+    value: 'under 18',
+    label: 'Under 18',
+  },
+  {
+    value: '18 to 25',
+    label: '18 to 25',
+  },
+  {
+    value: '25 to 45',
+    label: '25 to 45',
+  },
+  {
+    value: 'over 45',
+    label: 'over 45',
+  },
 ];
 
 const defaultFilters: IProductTableFilters = {
@@ -151,37 +165,37 @@ export default function ProductListView() {
     },
     {
       field: 'name',
-      headerName: 'Product',
+      headerName: 'Patient Name',
       flex: 1,
-      minWidth: 360,
+      minWidth: 260,
       hideable: false,
       renderCell: (params) => <RenderCellProduct params={params} />,
     },
     {
-      field: 'createdAt',
-      headerName: 'Create at',
+      field: 'Age',
+      headerName: 'Age',
       width: 160,
       renderCell: (params) => <RenderCellCreatedAt params={params} />,
     },
     {
-      field: 'inventoryType',
-      headerName: 'Stock',
+      field: 'Symptoms',
+      headerName: 'Symptoms',
       width: 160,
       type: 'singleSelect',
       valueOptions: PRODUCT_STOCK_OPTIONS,
       renderCell: (params) => <RenderCellStock params={params} />,
     },
     {
-      field: 'price',
-      headerName: 'Price',
+      field: 'allergies',
+      headerName: 'Allergies',
       width: 140,
       editable: true,
       renderCell: (params) => <RenderCellPrice params={params} />,
     },
     {
-      field: 'publish',
-      headerName: 'Publish',
-      width: 110,
+      field: 'appointment day',
+      headerName: 'Appointment day',
+      width: 210,
       type: 'singleSelect',
       editable: true,
       valueOptions: PUBLISH_OPTIONS,
@@ -243,7 +257,7 @@ export default function ProductListView() {
           links={[
             { name: 'Dashboard', href: paths.dashboard.root },
             {
-              name: 'Product',
+              name: 'Diagnosis',
               href: paths.dashboard.product.root,
             },
             { name: 'List' },
@@ -255,7 +269,7 @@ export default function ProductListView() {
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
             >
-              New Product
+              New Patient
             </Button>
           }
           sx={{

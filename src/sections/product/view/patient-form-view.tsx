@@ -146,7 +146,7 @@ export default function PatientForm() {
             />
 
             <RHFTextField name="symptoms" label="Symptoms" multiline rows={4} />
-            <RHFTextField name="medicalHistory" label="Medical History" multiline rows={4} />
+            <RHFTextField name="medicalHistory" label="Medical History" multiline rows={7} />
             <RHFTextField name="allergies" label="Allergies" />
             <RHFTextField name="currentMedications" label="Current Medications" />
 

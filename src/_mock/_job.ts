@@ -64,12 +64,20 @@ export const JOB_BENEFIT_OPTIONS = [
 
 export const JOB_PUBLISH_OPTIONS = [
   {
-    value: 'published',
-    label: 'Published',
+    value: 'under 18',
+    label: 'Under 18',
   },
   {
-    value: 'draft',
-    label: 'Draft',
+    value: '18 to 25',
+    label: '18 to 25',
+  },
+  {
+    value: '25 to 45',
+    label: '25 to 45',
+  },
+  {
+    value: 'over 45',
+    label: 'over 45',
   },
 ];
 
@@ -124,7 +132,7 @@ const CONTENT = `
 `;
 
 export const _jobs = [...Array(12)].map((_, index) => {
-  const publish = index % 3 ? 'published' : 'draft';
+  const publish = index % 3 ? 'Under 18' : '18-25';
 
   const salary = {
     type: (index % 5 && 'Custom') || 'Hourly',
