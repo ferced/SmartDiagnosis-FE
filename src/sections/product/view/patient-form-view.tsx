@@ -1,5 +1,7 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import axios from 'axios';
 import * as Yup from 'yup';
+import Stepper from 'react-stepper-horizontal';
 import { useState, SetStateAction } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
@@ -8,7 +10,7 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Grid from '@mui/material/Unstable_Grid2';
 import CardHeader from '@mui/material/CardHeader';
-import { Healing, Assignment, Announcement } from '@mui/icons-material';
+import { Healing, BarChart, Assignment, Announcement } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -31,11 +33,19 @@ import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form'
 
 // ----------------------------------------------------------------------
 
+interface ResponseDetails {
+  diagnosis: string;
+  probability: string;
+  treatment: string;
+  disclaimer: string;
+}
+
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [responseDetails, setResponseDetails] = useState({});
+  const [responseDetails, setResponseDetails] = useState<ResponseDetails[]>([]);
   const [askInputShown, setAskInputShown] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const [question, setQuestion] = useState('');
 
@@ -49,15 +59,13 @@ export default function PatientForm() {
 
   const handleSubmitQuestion = () => {
     console.log('Question Submitted:', question);
-    // Here you would typically send the question to your backend or handle it as needed
-    setAskInputShown(false); // Optionally hide the input and button after submission
-    setQuestion(''); // Clear the question input field
+    setAskInputShown(false);
+    setQuestion('');
   };
 
-  // Define a more appropriate schema for a patient form
   const PatientSchema = Yup.object().shape({
     patientName: Yup.string().required('Patient name is required'),
-    age: Yup.number().positive().integer().required('Age is required'), // Ensure age is a number
+    age: Yup.number().positive().integer().required('Age is required'),
     symptoms: Yup.string().required('Symptoms are required'),
     medicalHistory: Yup.string(),
     allergies: Yup.string(),
@@ -71,20 +79,8 @@ export default function PatientForm() {
     ),
   });
 
-  // Your form initialization and usage logic follows
   const methods = useForm({
     resolver: yupResolver(PatientSchema),
-    defaultValues: {
-      patientName: 'Alex Johnson',
-      age: 29,
-      symptoms:
-        'Fatigue, intermittent joint pains, and occasional headaches. Recently noticed a circular rash.',
-      medicalHistory:
-        'Reported tick bite during a camping trip last summer, frequent outdoor activities. Previous episodes of unexplained fatigue and mild fevers over the past few months.',
-      allergies: 'Penicillin',
-      gender: '',
-      currentMedications: 'Occasional ibuprofen for joint pain',
-    },
   });
 
   const { reset } = methods;
@@ -108,26 +104,23 @@ export default function PatientForm() {
         patientName: data.patientName,
       };
 
-      const response = await axios.post(`${HOST_API}/diagnosis/submit`, formattedData, {
+      const response = await axios.post(`${HOST_API}/diagnoses/submit`, formattedData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       console.log(response.data);
-      setResponseDetails(response.data);
+      const diagnosisData = Array.isArray(response.data) ? response.data : [response.data];
+      setResponseDetails(diagnosisData);
       setIsLoading(false);
       setResponseReceived(true);
-      // Handle post-submission logic: reset form, navigate, show success message, etc.
       reset();
     } catch (error) {
       console.error(error.response ? error.response.data : error.message);
-      // Handle errors (e.g., show error message to the user)
       setIsLoading(false);
     }
   };
-
-  // Additional logic for handling file uploads, removal, etc.
 
   const renderDetails = (
     <Grid container spacing={3}>
@@ -163,6 +156,7 @@ export default function PatientForm() {
       </Grid>
     </Grid>
   );
+
   const renderSubmitButton = (
     <Stack direction="row" justifyContent="center" spacing={2} sx={{ mt: 3 }}>
       <Button
@@ -186,58 +180,105 @@ export default function PatientForm() {
     </Stack>
   );
 
-  const renderResponseDetails = (details: any) => (
-    <Card
-      raised
-      sx={{
-        maxWidth: '100%',
-        mx: 'auto',
-        mt: 5,
-        bgcolor: theme.palette.background.paper,
-        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-        borderRadius: '8px',
-      }}
-    >
-      <CardHeader
-        title="Diagnosis Results"
-        subheader=" "
-        titleTypographyProps={{ align: 'center', variant: 'h4' }}
-        subheaderTypographyProps={{ align: 'center' }}
-        sx={{
-          backgroundColor: theme.palette.primary.main,
-          color: theme.palette.common.white,
-          paddingBottom: 3,
-        }}
+  const renderResponseDetails = (detailsArray: ResponseDetails[]) => (
+    <Box sx={{ mt: 3 }}>
+      <Stepper
+        steps={detailsArray.map((_, index) => ({ title: `Diagnosis ${index + 1}` }))}
+        activeStep={activeStep}
+        activeColor={theme.palette.primary.main}
+        completeColor={theme.palette.success.main}
+        defaultColor={theme.palette.grey[300]}
+        completeBarColor={theme.palette.success.main}
+        defaultBarColor={theme.palette.grey[300]}
+        barStyle="solid"
+        titleFontSize={14}
+        circleFontSize={14}
+        size={36}
       />
-      <CardContent>
-        <Box display="flex" alignItems="center" my={2}>
-          <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-          <Typography variant="h6">Diagnosis</Typography>
-        </Box>
-        <Typography paragraph sx={{ ml: 4 }}>
-          {details.diagnosis}
-        </Typography>
+      <Box sx={{ mt: 5 }}>
+        {Array.isArray(detailsArray) && detailsArray.map((details, index) => (
+          <Collapse in={activeStep === index} timeout="auto" unmountOnExit key={index}>
+            <Card
+              raised
+              sx={{
+                maxWidth: '100%',
+                mx: 'auto',
+                mt: 5,
+                bgcolor: theme.palette.background.paper,
+                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                borderRadius: '8px',
+              }}
+            >
+              <CardHeader
+                title={`Diagnosis Result ${index + 1}`}
+                subheader=" "
+                titleTypographyProps={{ align: 'center', variant: 'h4' }}
+                subheaderTypographyProps={{ align: 'center' }}
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.common.white,
+                  paddingBottom: 3,
+                }}
+              />
+              <CardContent>
+                <Box display="flex" alignItems="center" my={2}>
+                  <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
+                  <Typography variant="h6">Diagnosis</Typography>
+                </Box>
+                <Typography paragraph sx={{ ml: 4 }}>
+                  {details.diagnosis}
+                </Typography>
 
-        <Divider sx={{ my: 2 }} />
+                <Box display="flex" alignItems="center" my={2}>
+                  <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
+                  <Typography variant="h6">Probability</Typography>
+                </Box>
+                <Typography paragraph sx={{ ml: 4 }}>
+                  {details.probability}
+                </Typography>
 
-        <Box display="flex" alignItems="center" my={2}>
-          <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-          <Typography variant="h6">Treatment</Typography>
-        </Box>
-        <Typography paragraph sx={{ ml: 4 }}>
-          {details.treatment}
-        </Typography>
-        <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 2 }} />
 
-        <Box display="flex" alignItems="center" my={2}>
-          <Announcement sx={{ color: theme.palette.warning.main, mr: 2 }} />
-          <Typography variant="h6">Disclaimer</Typography>
-        </Box>
-        <Typography paragraph sx={{ ml: 4 }}>
-          {details.disclaimer}
-        </Typography>
-      </CardContent>
-    </Card>
+                <Box display="flex" alignItems="center" my={2}>
+                  <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+                  <Typography variant="h6">Treatment</Typography>
+                </Box>
+                <Typography paragraph sx={{ ml: 4 }}>
+                  {details.treatment}
+                </Typography>
+                <Divider sx={{ my: 2 }} />
+
+                <Box display="flex" alignItems="center" my={2}>
+                  <Announcement sx={{ color: theme.palette.warning.main, mr: 2 }} />
+                  <Typography variant="h6">Disclaimer</Typography>
+                </Box>
+                <Typography paragraph sx={{ ml: 4 }}>
+                  {details.disclaimer}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Collapse>
+        ))}
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={activeStep === 0}
+          onClick={() => setActiveStep((prev) => Math.max(prev - 1, 0))}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={activeStep === detailsArray.length - 1}
+          onClick={() => setActiveStep((prev) => Math.min(prev + 1, detailsArray.length - 1))}
+        >
+          Next
+        </Button>
+      </Box>
+    </Box>
   );
 
   const renderFollowUpPrompt = () => (
@@ -333,7 +374,7 @@ export default function PatientForm() {
       ) : (
         <>
           {renderResponseDetails(responseDetails)}
-          {renderFollowUpPrompt()} {/* Call the follow-up prompt here */}
+          {renderFollowUpPrompt()}
         </>
       )}
     </FormProvider>

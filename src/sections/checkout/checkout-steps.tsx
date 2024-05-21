@@ -65,11 +65,11 @@ export default function CheckoutSteps({ steps, activeStep, sx, ...other }: Props
 // ----------------------------------------------------------------------
 
 type StepIconProps = {
-  active: boolean;
-  completed: boolean;
+  active?: boolean;
+  completed?: boolean;
 };
 
-function StepIcon({ active, completed }: StepIconProps) {
+function StepIcon({ active = false, completed = false }: StepIconProps) {
   return (
     <Stack
       alignItems="center"
