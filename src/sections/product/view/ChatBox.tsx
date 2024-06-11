@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { useState, SetStateAction } from 'react';
-
-import { Box, List, Button, Collapse, ListItem, TextField, Typography, ListItemText, CircularProgress } from '@mui/material';
+import { Box, Button, Collapse, TextField, Typography, CircularProgress, List, ListItem, ListItemText } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
@@ -96,8 +95,8 @@ export default function ChatBox({
               primary={<Typography variant="body1" color="text.primary"><strong>Q:</strong> {entry.question}</Typography>}
               secondary={
                 entry.response && (
-                  <Typography variant="body1" color="text.secondary">
-                    <strong>A:</strong> {entry.response}
+                  <Typography variant="body1" color="text.secondary" component="div">
+                    <strong>A:</strong> <div dangerouslySetInnerHTML={{ __html: entry.response }} />
                   </Typography>
                 )
               }
