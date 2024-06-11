@@ -1,8 +1,8 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import axios from 'axios';
 import * as Yup from 'yup';
+import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
-import { useState, SetStateAction } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 
@@ -19,7 +19,6 @@ import {
   MenuItem,
   useTheme,
   Collapse,
-  TextField,
   InputLabel,
   Typography,
   FormControl,
@@ -31,6 +30,7 @@ import { HOST_API } from 'src/config-global';
 
 import FormProvider, { RHFUpload, RHFTextField } from 'src/components/hook-form';
 
+import ChatBox from './ChatBox'; 
 // ----------------------------------------------------------------------
 
 interface ResponseDetails {
@@ -44,24 +44,10 @@ export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [responseDetails, setResponseDetails] = useState<ResponseDetails[]>([]);
-  const [askInputShown, setAskInputShown] = useState(false);
+  const [originalPatientInfo, setOriginalPatientInfo] = useState({});
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const [question, setQuestion] = useState('');
-
-  const handleAskNowClick = () => {
-    setAskInputShown((prev) => !prev);
-  };
-
-  const handleQuestionChange = (event: { target: { value: SetStateAction<string> } }) => {
-    setQuestion(event.target.value);
-  };
-
-  const handleSubmitQuestion = () => {
-    console.log('Question Submitted:', question);
-    setAskInputShown(false);
-    setQuestion('');
-  };
 
   const PatientSchema = Yup.object().shape({
     patientName: Yup.string().required('Patient name is required'),
@@ -83,10 +69,12 @@ export default function PatientForm() {
     resolver: yupResolver(PatientSchema),
   });
 
-  const { reset } = methods;
+  const { reset, setValue, handleSubmit } = methods;
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     console.log('Patient Details:', data);
+
+    setOriginalPatientInfo(data);
 
     setIsLoading(true);
 
@@ -120,6 +108,24 @@ export default function PatientForm() {
       console.error(error.response ? error.response.data : error.message);
       setIsLoading(false);
     }
+  };
+
+  const handleAutoFill = () => {
+    const preloadedData = {
+      patientName: 'John Doe',
+      age: 45,
+      symptoms: 'Fever, Cough, Sore Throat',
+      medicalHistory: 'Hypertension, Diabetes',
+      allergies: 'Peanuts',
+      gender: 'male',
+      currentMedications: 'Aspirin',
+    };
+
+    Object.keys(preloadedData).forEach((key) => {
+      setValue(key as keyof typeof preloadedData, preloadedData[key as keyof typeof preloadedData]);
+    });
+
+    handleSubmit(onSubmit)();
   };
 
   const renderDetails = (
@@ -176,6 +182,23 @@ export default function PatientForm() {
         }}
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit Patient Information'}
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={handleAutoFill}
+        sx={{
+          borderRadius: 2,
+          padding: '10px 30px',
+          boxShadow: '0 3px 5px 2px rgba(105, 140, 255, .3)',
+          ':hover': {
+            boxShadow: '0 5px 7px 3px rgba(105, 140, 255, .4)',
+          },
+          textTransform: 'none',
+          fontWeight: 'bold',
+        }}
+      >
+        Auto Fill & Submit
       </Button>
     </Stack>
   );
@@ -281,89 +304,6 @@ export default function PatientForm() {
     </Box>
   );
 
-  const renderFollowUpPrompt = () => (
-    <Box
-      sx={{
-        mt: 4,
-        py: 3,
-        px: 2,
-        bgcolor: theme.palette.background.paper,
-        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-        borderRadius: '8px',
-        textAlign: 'center',
-      }}
-    >
-      <Typography
-        variant="h5"
-        sx={{ mb: 2, fontWeight: 'medium', color: theme.palette.text.primary }}
-      >
-        Got More Questions?
-      </Typography>
-      <Typography variant="body1" sx={{ mb: 3, color: theme.palette.text.secondary }}>
-        If you have any more questions or need further clarification, don&apos;t hesitate to ask.
-      </Typography>
-      <Collapse in={!askInputShown}>
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{
-            borderRadius: '20px',
-            textTransform: 'none',
-            px: 4,
-            py: '6px',
-            boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-            ':hover': {
-              boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
-            },
-          }}
-          onClick={handleAskNowClick}
-        >
-          Ask Now
-        </Button>
-      </Collapse>
-      <Collapse in={askInputShown}>
-        <Box
-          sx={{
-            mt: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TextField
-            variant="outlined"
-            value={question}
-            onChange={handleQuestionChange}
-            placeholder="Type your question here..."
-            sx={{
-              width: '100%',
-              maxWidth: '600px',
-              mr: 1,
-            }}
-            autoFocus
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmitQuestion}
-            sx={{
-              borderRadius: '20px',
-              textTransform: 'none',
-              px: 2,
-              py: '6px',
-              boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-              ':hover': {
-                boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
-              },
-            }}
-          >
-            Submit
-          </Button>
-        </Box>
-      </Collapse>
-    </Box>
-  );
-
   return (
     <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
       {!responseReceived ? (
@@ -374,7 +314,7 @@ export default function PatientForm() {
       ) : (
         <>
           {renderResponseDetails(responseDetails)}
-          {renderFollowUpPrompt()}
+          <ChatBox question={question} setQuestion={setQuestion} originalPatientInfo={originalPatientInfo} initialResponse={responseDetails[activeStep]} />  
         </>
       )}
     </FormProvider>
