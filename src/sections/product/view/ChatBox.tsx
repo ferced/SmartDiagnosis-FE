@@ -1,6 +1,9 @@
+/* eslint-disable react/no-danger */
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 import { useState, SetStateAction } from 'react';
-import { Box, Button, Collapse, TextField, Typography, CircularProgress, List, ListItem, ListItemText } from '@mui/material';
+
+import { Box, List, Button, Collapse, ListItem, TextField, Typography, ListItemText, CircularProgress } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
@@ -96,7 +99,7 @@ export default function ChatBox({
               secondary={
                 entry.response && (
                   <Typography variant="body1" color="text.secondary" component="div">
-                    <strong>A:</strong> <div dangerouslySetInnerHTML={{ __html: entry.response }} />
+                    <strong>A:</strong> <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.response) }} />
                   </Typography>
                 )
               }

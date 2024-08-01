@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Stepper from 'react-stepper-horizontal';
+
 import { Healing, BarChart, Assignment, Description, Announcement } from '@mui/icons-material';
 import { Box, Card, Button, Divider, Collapse, useTheme, TextField, CardHeader, Typography, CardContent, CircularProgress } from '@mui/material';
 
@@ -23,13 +24,13 @@ interface FollowUpPayload {
 interface ResponseDetailsProps {
   responseDetails: DiagnosisResponseDetails[];
   activeStep: number;
-  setActiveStep: (step: number) => void;
+  setActiveStep: (step: number | ((prevStep: number) => number)) => void;
   showFollowUp: boolean;
   setShowFollowUp: (show: boolean) => void;
   followUpAnswers: { [key: number]: string[] };
-  setFollowUpAnswers: (answers: { [key: number]: string[] }) => void;
+  setFollowUpAnswers: (answers: { [key: number]: string[] } | ((prev: { [key: number]: string[] }) => { [key: number]: string[] })) => void;
   followUpResponse: { [key: number]: FollowUpPayload | null };
-  setFollowUpResponse: (response: { [key: number]: FollowUpPayload | null }) => void;
+  setFollowUpResponse: (response: { [key: number]: FollowUpPayload | null } | ((prev: { [key: number]: FollowUpPayload | null }) => { [key: number]: FollowUpPayload | null })) => void;
   originalPatientInfo: any;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -71,7 +72,7 @@ export default function ResponseDetails({
           { question: "Do you have any allergies?", response: originalPatientInfo.allergies },
           { question: "Do you have any chronic conditions?", response: "Yes, hypertension and diabetes." },
           ...details.follow_up_questions.map((question2, idx) => ({
-            question2,
+            question: question2,
             response: followUpAnswers[index]?.[idx] || ''
           }))
         ]
@@ -83,7 +84,7 @@ export default function ResponseDetails({
         },
       });
 
-      setFollowUpResponse(prev => ({
+      setFollowUpResponse((prev) => ({
         ...prev,
         [index]: response.data
       }));
@@ -214,7 +215,7 @@ export default function ResponseDetails({
                             onChange={(e) => {
                               const newAnswers = [...(followUpAnswers[index] || [])];
                               newAnswers[qIndex] = e.target.value;
-                              setFollowUpAnswers(prev => ({
+                              setFollowUpAnswers((prev) => ({
                                 ...prev,
                                 [index]: newAnswers,
                               }));
@@ -306,7 +307,7 @@ export default function ResponseDetails({
           color="primary"
           disabled={activeStep === 0}
           onClick={() => {
-            setActiveStep((prev: number) => Math.max(prev - 1, 0));
+            setActiveStep((prev) => Math.max(prev - 1, 0));
             setShowFollowUp(false);
           }}
         >
@@ -317,7 +318,7 @@ export default function ResponseDetails({
           color="primary"
           disabled={activeStep === responseDetails.length - 1}
           onClick={() => {
-            setActiveStep((prev: number) => Math.min(prev + 1, responseDetails.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, responseDetails.length - 1));
             setShowFollowUp(false);
           }}
         >
