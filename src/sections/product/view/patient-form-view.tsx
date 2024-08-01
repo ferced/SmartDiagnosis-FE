@@ -8,9 +8,9 @@ import { HOST_API } from 'src/config-global';
 
 import FormProvider from 'src/components/hook-form';
 
+import ChatBox from './ChatBox';
 import MainForm from './main-form';
 import ResponseDetails from './response-details-form';
-import ChatBox from './ChatBox';
 
 interface DiagnosisResponseDetails {
   diagnosis: string;
@@ -30,7 +30,7 @@ interface FollowUpPayload {
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [responseDetails, setResponseDetails] = useState<ResponseDetails[]>([]);
+  const [responseDetails, setResponseDetails] = useState<DiagnosisResponseDetails[]>([]);
   const [originalPatientInfo, setOriginalPatientInfo] = useState({});
   const [activeStep, setActiveStep] = useState(0);
   const [question, setQuestion] = useState('');
