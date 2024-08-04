@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
 import { Healing, BarChart, Assignment, Description, Announcement } from '@mui/icons-material';
-import { Box, Card, Button, Divider, Collapse, useTheme, TextField, CardHeader, Typography, CardContent, CircularProgress } from '@mui/material';
+import { Box, Card, Alert, Button, Divider, Collapse, useTheme, Snackbar, TextField, CardHeader, Typography, CardContent, CircularProgress } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
@@ -51,6 +52,7 @@ export default function ResponseDetails({
   setIsLoading,
 }: ResponseDetailsProps) {
   const theme = useTheme();
+  const [error, setError] = useState<string | null>(null);
 
   const handleFollowUpSubmit = async (details: DiagnosisResponseDetails, index: number) => {
     setIsLoading(true);
@@ -59,6 +61,7 @@ export default function ResponseDetails({
 
     if (!token) {
       console.error('No access token found in sessionStorage');
+      setError('No access token found in sessionStorage');
       setIsLoading(false);
       return;
     }
@@ -90,10 +93,15 @@ export default function ResponseDetails({
       }));
       setIsLoading(false);
       setShowFollowUp(false);
-    } catch (error) {
-      console.error(error.response ? error.response.data : error.message);
+    } catch (err) {
+      console.error(err.response ? err.response.data : err.message);
+      setError(typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.message);
       setIsLoading(false);
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setError(null);
   };
 
   return (
@@ -144,7 +152,7 @@ export default function ResponseDetails({
                 <Typography paragraph sx={{ ml: 4 }}>
                   {details.diagnosis}
                 </Typography>
-
+                <Divider sx={{ my: 2 }} />
                 <Box display="flex" alignItems="center" my={2}>
                   <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
                   <Typography variant="h6">Probability</Typography>
@@ -269,7 +277,7 @@ export default function ResponseDetails({
               <Typography paragraph sx={{ ml: 4 }}>
                 {followUpResponse[activeStep]?.diagnosis}
               </Typography>
-
+              <Divider sx={{ my: 2 }} />
               <Box display="flex" alignItems="center" my={2}>
                 <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
                 <Typography variant="h6">Probability</Typography>
@@ -325,6 +333,11 @@ export default function ResponseDetails({
           Next
         </Button>
       </Box>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

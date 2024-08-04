@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
+
 import { HOST_API } from 'src/config-global';
 
 import FormProvider from 'src/components/hook-form';
@@ -37,6 +40,7 @@ export default function PatientForm() {
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpAnswers, setFollowUpAnswers] = useState<{ [key: number]: string[] }>({});
   const [followUpResponse, setFollowUpResponse] = useState<{ [key: number]: FollowUpPayload | null }>({});
+  const [error, setError] = useState<string | null>(null);
 
   const PatientSchema = Yup.object().shape({
     patientName: Yup.string().required('Patient name is required'),
@@ -69,6 +73,7 @@ export default function PatientForm() {
 
     if (!token) {
       console.error('No access token found in sessionStorage');
+      setError('No access token found in sessionStorage');
       setIsLoading(false);
       return;
     }
@@ -90,10 +95,15 @@ export default function PatientForm() {
       setIsLoading(false);
       setResponseReceived(true);
       reset();
-    } catch (error) {
-      console.error(error.response ? error.response.data : error.message);
+    } catch (err) {
+      console.error(err.response ? err.response.data : err.message);
+      setError(typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.message);
       setIsLoading(false);
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setError(null);
   };
 
   return (
@@ -124,6 +134,11 @@ export default function PatientForm() {
           initialResponse={responseDetails[activeStep]}
         />
       )}
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </FormProvider>
   );
 }
