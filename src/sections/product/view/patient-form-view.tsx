@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as Yup from 'yup';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
@@ -16,9 +16,6 @@ import MainForm from './main-form';
 import ResponseDetails from './response-details-form';
 
 interface DiagnosisResponseDetails {
-  diagnosis: string;
-  probability: string;
-  treatment: string;
   disclaimer: string;
   follow_up_questions: string[];
 }
@@ -28,18 +25,17 @@ interface FollowUpPayload {
   probability: string;
   treatment: string;
   reason: string;
+  follow_up_questions?: string[];
 }
 
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [responseDetails, setResponseDetails] = useState<DiagnosisResponseDetails[]>([]);
+  const [responseDetails, setResponseDetails] = useState<DiagnosisResponseDetails | null>(null);
   const [originalPatientInfo, setOriginalPatientInfo] = useState({});
-  const [activeStep, setActiveStep] = useState(0);
-  const [question, setQuestion] = useState('');
   const [showFollowUp, setShowFollowUp] = useState(false);
-  const [followUpAnswers, setFollowUpAnswers] = useState<{ [key: number]: string[] }>({});
-  const [followUpResponse, setFollowUpResponse] = useState<{ [key: number]: FollowUpPayload | null }>({});
+  const [followUpAnswers, setFollowUpAnswers] = useState<string[]>([]);
+  const [followUpResponse, setFollowUpResponse] = useState<FollowUpPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const PatientSchema = Yup.object().shape({
@@ -62,6 +58,10 @@ export default function PatientForm() {
     resolver: yupResolver(PatientSchema),
   });
 
+  useEffect(() => {
+    console.log('responseDetails:', responseDetails);
+  }, [responseDetails]);
+  
   const { reset, handleSubmit } = methods;
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
@@ -90,8 +90,7 @@ export default function PatientForm() {
         },
       });
 
-      const diagnosisData = Array.isArray(response.data) ? response.data : [response.data];
-      setResponseDetails(diagnosisData);
+      setResponseDetails(response.data);
       setIsLoading(false);
       setResponseReceived(true);
       reset();
@@ -112,9 +111,8 @@ export default function PatientForm() {
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
       ) : (
         <ResponseDetails
-          responseDetails={responseDetails}
-          activeStep={activeStep}
-          setActiveStep={setActiveStep}
+          responseDetails={responseDetails!}
+          setResponseDetails={setResponseDetails} // Ensure this line is included
           showFollowUp={showFollowUp}
           setShowFollowUp={setShowFollowUp}
           followUpAnswers={followUpAnswers}
@@ -124,14 +122,6 @@ export default function PatientForm() {
           originalPatientInfo={originalPatientInfo}
           isLoading={isLoading}
           setIsLoading={setIsLoading}
-        />
-      )}
-      {responseReceived && (
-        <ChatBox
-          question={question}
-          setQuestion={setQuestion}
-          originalPatientInfo={originalPatientInfo}
-          initialResponse={responseDetails[activeStep]}
         />
       )}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
