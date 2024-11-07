@@ -62,17 +62,18 @@ export default function AccountPopover() {
           }),
         }}
       >
-        <Avatar
-          src={user?.photoURL}
-          alt={user?.displayName}
-          sx={{
-            width: 36,
-            height: 36,
-            border: (theme) => `solid 2px ${theme.palette.background.default}`,
-          }}
-        >
-          {user?.displayName?.charAt(0).toUpperCase()}
-        </Avatar>
+      <Avatar
+  src="/favicon/favicon-32x32.png"  // Add the correct path to your image
+  alt={user?.displayName}
+  sx={{
+    width: 36,
+    height: 36,
+    border: (theme) => `solid 2px ${theme.palette.background.default}`,
+  }}
+>
+  {user?.displayName?.charAt(0).toUpperCase()}
+</Avatar>
+
       </IconButton>
 
       <CustomPopover open={popover.open} onClose={popover.onClose} sx={{ width: 200, p: 0 }}>

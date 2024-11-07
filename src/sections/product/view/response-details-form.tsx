@@ -2,39 +2,49 @@ import axios from 'axios';
 import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
-import { Healing, BarChart, Assignment, Description, Announcement } from '@mui/icons-material';
-import { Box, Card, Alert, Button, Divider, Collapse, useTheme, Snackbar, TextField, CardHeader, Typography, CardContent, CircularProgress } from '@mui/material';
+import { Healing, BarChart, Assignment } from '@mui/icons-material';
+import {
+  Box,
+  Card,
+  Alert,
+  Button,
+  Divider,
+  Collapse,
+  useTheme,
+  Snackbar,
+  TextField,
+  CardHeader,
+  Typography,
+  CardContent,
+  CircularProgress,
+} from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
-interface DiagnosisResponseDetails {
+interface DiagnosisDetail {
   diagnosis: string;
-  probability: string;
   treatment: string;
+  probability: string;
+}
+
+interface DiagnosisResponseDetails {
   disclaimer: string;
+  diagnoses: DiagnosisDetail[];
   follow_up_questions: string[];
 }
 
-interface FollowUpPayload {
-  diagnosis: string;
-  probability: string;
-  treatment: string;
-  reason: string;
-}
-
 interface ResponseDetailsProps {
-  responseDetails: DiagnosisResponseDetails[];
+  responseDetails: DiagnosisResponseDetails;
   activeStep: number;
-  setActiveStep: (step: number | ((prevStep: number) => number)) => void;
+  setActiveStep: React.Dispatch<React.SetStateAction<number>>;
   showFollowUp: boolean;
-  setShowFollowUp: (show: boolean) => void;
-  followUpAnswers: { [key: number]: string[] };
-  setFollowUpAnswers: (answers: { [key: number]: string[] } | ((prev: { [key: number]: string[] }) => { [key: number]: string[] })) => void;
-  followUpResponse: { [key: number]: FollowUpPayload | null };
-  setFollowUpResponse: (response: { [key: number]: FollowUpPayload | null } | ((prev: { [key: number]: FollowUpPayload | null }) => { [key: number]: FollowUpPayload | null })) => void;
+  setShowFollowUp: React.Dispatch<React.SetStateAction<boolean>>;
+  followUpAnswers: string[];
+  setFollowUpAnswers: React.Dispatch<React.SetStateAction<string[]>>;
   originalPatientInfo: any;
   isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
 }
 
 export default function ResponseDetails({
@@ -45,16 +55,18 @@ export default function ResponseDetails({
   setShowFollowUp,
   followUpAnswers,
   setFollowUpAnswers,
-  followUpResponse,
-  setFollowUpResponse,
   originalPatientInfo,
   isLoading,
   setIsLoading,
+  setResponseDetails,
 }: ResponseDetailsProps) {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<
+    Array<{ question: string; answer: string }>
+  >([]);
 
-  const handleFollowUpSubmit = async (details: DiagnosisResponseDetails, index: number) => {
+  const handleFollowUpSubmit = async () => {
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
@@ -67,18 +79,20 @@ export default function ResponseDetails({
     }
 
     try {
+      // Update conversation history
+      const newConversationEntries = responseDetails.follow_up_questions.map((question, index) => ({
+        question,
+        answer: followUpAnswers[index] || '',
+      }));
+
+      const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
+      setConversationHistory(updatedConversationHistory);
+
       const followUpRequest = {
         originalPatientInfo,
-        initialResponse: details,
-        followUpQuestions: followUpAnswers[index] || [],
-        conversationHistory: [
-          { question: "Do you have any allergies?", response: originalPatientInfo.allergies },
-          { question: "Do you have any chronic conditions?", response: "Yes, hypertension and diabetes." },
-          ...details.follow_up_questions.map((question2, idx) => ({
-            question: question2,
-            response: followUpAnswers[index]?.[idx] || ''
-          }))
-        ]
+        initialResponse: responseDetails,
+        followUpAnswers,
+        conversationHistory: updatedConversationHistory,
       };
 
       const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
@@ -87,15 +101,20 @@ export default function ResponseDetails({
         },
       });
 
-      setFollowUpResponse((prev) => ({
-        ...prev,
-        [index]: response.data
-      }));
+      setResponseDetails(response.data);
+      setFollowUpAnswers([]);
       setIsLoading(false);
       setShowFollowUp(false);
+      setActiveStep(0);
+
+      if (response.data.diagnoses.length === 1) {
+        // Optionally display a message or handle the final diagnosis
+      }
     } catch (err) {
       console.error(err.response ? err.response.data : err.message);
-      setError(typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.message);
+      setError(
+        typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
+      );
       setIsLoading(false);
     }
   };
@@ -107,7 +126,9 @@ export default function ResponseDetails({
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={responseDetails.map((_, index) => ({ title: `Diagnosis ${index + 1}` }))}
+        steps={responseDetails.diagnoses.map((_, idx) => ({
+          title: `Diagnosis ${idx + 1}`,
+        }))}
         activeStep={activeStep}
         activeColor={theme.palette.primary.main}
         completeColor={theme.palette.success.main}
@@ -120,8 +141,8 @@ export default function ResponseDetails({
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {Array.isArray(responseDetails) && responseDetails.map((details, index) => (
-          <Collapse in={activeStep === index} timeout="auto" unmountOnExit key={index}>
+        {responseDetails.diagnoses.map((details: DiagnosisDetail, idx: number) => (
+          <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
               sx={{
@@ -134,7 +155,7 @@ export default function ResponseDetails({
               }}
             >
               <CardHeader
-                title={`Diagnosis Result ${index + 1}`}
+                title={`Diagnosis Result ${idx + 1}`}
                 subheader=" "
                 titleTypographyProps={{ align: 'center', variant: 'h4' }}
                 subheaderTypographyProps={{ align: 'center' }}
@@ -170,143 +191,71 @@ export default function ResponseDetails({
                 <Typography paragraph sx={{ ml: 4 }}>
                   {details.treatment}
                 </Typography>
-                <Divider sx={{ my: 2 }} />
-
-                <Box display="flex" alignItems="center" my={2}>
-                  <Announcement sx={{ color: theme.palette.warning.main, mr: 2 }} />
-                  <Typography variant="h6">Disclaimer</Typography>
-                </Box>
-                <Typography paragraph sx={{ ml: 4 }}>
-                  {details.disclaimer}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => setShowFollowUp(true)}
-                  sx={{ mt: 2 }}
-                >
-                  Follow Up Questions
-                </Button>
               </CardContent>
-              {showFollowUp && activeStep === index && (
-                <Box key={index} sx={{ mt: 3 }}>
-                  <Card
-                    raised
-                    sx={{
-                      maxWidth: '100%',
-                      mx: 'auto',
-                      mt: 5,
-                      bgcolor: theme.palette.background.paper,
-                      boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <CardHeader
-                      title={`Follow Up Questions for Diagnosis ${index + 1}`}
-                      titleTypographyProps={{ align: 'center', variant: 'h4' }}
-                      sx={{
-                        backgroundColor: theme.palette.primary.main,
-                        color: theme.palette.common.white,
-                        paddingBottom: 3,
-                      }}
-                    />
-                    <CardContent>
-                      {details.follow_up_questions.map((question, qIndex) => (
-                        <Box key={qIndex} mb={3}>
-                          <Typography variant="h6">{question}</Typography>
-                          <TextField
-                            fullWidth
-                            variant="outlined"
-                            value={followUpAnswers[index]?.[qIndex] || ''}
-                            onChange={(e) => {
-                              const newAnswers = [...(followUpAnswers[index] || [])];
-                              newAnswers[qIndex] = e.target.value;
-                              setFollowUpAnswers((prev) => ({
-                                ...prev,
-                                [index]: newAnswers,
-                              }));
-                            }}
-                            sx={{ mt: 1 }}
-                          />
-                        </Box>
-                      ))}
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleFollowUpSubmit(details, index)}
-                        sx={{ mt: 2 }}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit Follow Up Answers'}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Box>
-              )}
             </Card>
           </Collapse>
         ))}
-        {followUpResponse[activeStep] && (
-          <Card
-            raised
-            sx={{
-              maxWidth: '100%',
-              mx: 'auto',
-              mt: 5,
-              bgcolor: theme.palette.background.paper,
-              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-              borderRadius: '8px',
-            }}
-          >
-            <CardHeader
-              title="Follow Up Response"
-              titleTypographyProps={{ align: 'center', variant: 'h4' }}
+        {responseDetails.diagnoses.length === 1 && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Only one diagnosis remains after the follow-up. This is the most probable diagnosis
+            based on the provided information.
+          </Alert>
+        )}
+        {showFollowUp && (
+          <Box sx={{ mt: 3 }}>
+            <Card
+              raised
               sx={{
-                backgroundColor: theme.palette.primary.main,
-                color: theme.palette.common.white,
-                paddingBottom: 3,
+                maxWidth: '100%',
+                mx: 'auto',
+                mt: 5,
+                bgcolor: theme.palette.background.paper,
+                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                borderRadius: '8px',
               }}
-            />
-            <CardContent>
-              <Box display="flex" alignItems="center" my={2}>
-                <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-                <Typography variant="h6">Diagnosis</Typography>
-              </Box>
-              <Typography paragraph sx={{ ml: 4 }}>
-                {followUpResponse[activeStep]?.diagnosis}
-              </Typography>
-              <Divider sx={{ my: 2 }} />
-              <Box display="flex" alignItems="center" my={2}>
-                <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
-                <Typography variant="h6">Probability</Typography>
-              </Box>
-              <Typography paragraph sx={{ ml: 4 }}>
-                {followUpResponse[activeStep]?.probability}
-              </Typography>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box display="flex" alignItems="center" my={2}>
-                <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-                <Typography variant="h6">Treatment</Typography>
-              </Box>
-              <Typography paragraph sx={{ ml: 4 }}>
-                {followUpResponse[activeStep]?.treatment}
-              </Typography>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box display="flex" alignItems="center" my={2}>
-                <Description sx={{ color: theme.palette.info.main, mr: 2 }} />
-                <Typography variant="h6">Reason</Typography>
-              </Box>
-              <Typography paragraph sx={{ ml: 4 }}>
-                {followUpResponse[activeStep]?.reason}
-              </Typography>
-            </CardContent>
-          </Card>
+            >
+              <CardHeader
+                title="Follow Up Questions"
+                titleTypographyProps={{ align: 'center', variant: 'h4' }}
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.common.white,
+                  paddingBottom: 3,
+                }}
+              />
+              <CardContent>
+                {responseDetails.follow_up_questions.map((question, qIdx) => (
+                  <Box key={qIdx} mb={3}>
+                    <Typography variant="h6">{question}</Typography>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      value={followUpAnswers[qIdx] || ''}
+                      onChange={(e) => {
+                        const newAnswers = [...followUpAnswers];
+                        newAnswers[qIdx] = e.target.value;
+                        setFollowUpAnswers(newAnswers);
+                      }}
+                      sx={{ mt: 1 }}
+                    />
+                  </Box>
+                ))}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleFollowUpSubmit}
+                  sx={{ mt: 2 }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    'Submit Follow Up Answers'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </Box>
         )}
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
@@ -321,12 +270,22 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
+        {responseDetails.diagnoses.length > 1 && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setShowFollowUp(true)}
+            sx={{ mt: 2 }}
+          >
+            Follow Up Questions
+          </Button>
+        )}
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === responseDetails.length - 1}
+          disabled={activeStep === responseDetails.diagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, responseDetails.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, responseDetails.diagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >

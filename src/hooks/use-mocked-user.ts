@@ -18,7 +18,7 @@ export function useMockedUser() {
     displayName: 'Jaydon Frankie',
     email: 'admin@ferced.com',
     password: 'test',
-    photoURL: _mock.image.avatar(24),
+    photoURL: _mock.image.avatar(3),
     phoneNumber: '+40 777666555',
     country: 'United States',
     address: '90210 Broadway Blvd',

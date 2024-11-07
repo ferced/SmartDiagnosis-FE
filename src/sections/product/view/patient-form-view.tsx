@@ -15,31 +15,27 @@ import ChatBox from './ChatBox';
 import MainForm from './main-form';
 import ResponseDetails from './response-details-form';
 
-interface DiagnosisResponseDetails {
+interface DiagnosisDetail {
   diagnosis: string;
-  probability: string;
   treatment: string;
-  disclaimer: string;
-  follow_up_questions: string[];
+  probability: string;
 }
 
-interface FollowUpPayload {
-  diagnosis: string;
-  probability: string;
-  treatment: string;
-  reason: string;
+interface DiagnosisResponseDetails {
+  disclaimer: string;
+  diagnoses: DiagnosisDetail[];
+  follow_up_questions: string[];
 }
 
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [responseDetails, setResponseDetails] = useState<DiagnosisResponseDetails[]>([]);
+  const [responseDetails, setResponseDetails] = useState<DiagnosisResponseDetails | null>(null);
   const [originalPatientInfo, setOriginalPatientInfo] = useState({});
   const [activeStep, setActiveStep] = useState(0);
   const [question, setQuestion] = useState('');
   const [showFollowUp, setShowFollowUp] = useState(false);
-  const [followUpAnswers, setFollowUpAnswers] = useState<{ [key: number]: string[] }>({});
-  const [followUpResponse, setFollowUpResponse] = useState<{ [key: number]: FollowUpPayload | null }>({});
+  const [followUpAnswers, setFollowUpAnswers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const PatientSchema = Yup.object().shape({
@@ -90,14 +86,18 @@ export default function PatientForm() {
         },
       });
 
-      const diagnosisData = Array.isArray(response.data) ? response.data : [response.data];
-      setResponseDetails(diagnosisData);
+      console.log('Response Details:', response.data);
+
+      setResponseDetails(response.data);
+      setActiveStep(0); // Reset to the first diagnosis
       setIsLoading(false);
       setResponseReceived(true);
       reset();
     } catch (err) {
       console.error(err.response ? err.response.data : err.message);
-      setError(typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.message);
+      setError(
+        typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
+      );
       setIsLoading(false);
     }
   };
@@ -108,31 +108,41 @@ export default function PatientForm() {
 
   return (
     <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
-      {!responseReceived ? (
+      {!responseReceived && (
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
-      ) : (
-        <ResponseDetails
-          responseDetails={responseDetails}
-          activeStep={activeStep}
-          setActiveStep={setActiveStep}
-          showFollowUp={showFollowUp}
-          setShowFollowUp={setShowFollowUp}
-          followUpAnswers={followUpAnswers}
-          setFollowUpAnswers={setFollowUpAnswers}
-          followUpResponse={followUpResponse}
-          setFollowUpResponse={setFollowUpResponse}
-          originalPatientInfo={originalPatientInfo}
-          isLoading={isLoading}
-          setIsLoading={setIsLoading}
-        />
       )}
-      {responseReceived && (
-        <ChatBox
-          question={question}
-          setQuestion={setQuestion}
-          originalPatientInfo={originalPatientInfo}
-          initialResponse={responseDetails[activeStep]}
-        />
+      {responseReceived &&
+      responseDetails &&
+      responseDetails.diagnoses &&
+      responseDetails.diagnoses.length > 0 ? (
+        <>
+          <ResponseDetails
+            responseDetails={responseDetails}
+            activeStep={activeStep}
+            setActiveStep={setActiveStep}
+            showFollowUp={showFollowUp}
+            setShowFollowUp={setShowFollowUp}
+            followUpAnswers={followUpAnswers}
+            setFollowUpAnswers={setFollowUpAnswers}
+            originalPatientInfo={originalPatientInfo}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+            setResponseDetails={setResponseDetails}
+          />
+          <ChatBox
+            question={question}
+            setQuestion={setQuestion}
+            originalPatientInfo={originalPatientInfo}
+            initialResponse={responseDetails.diagnoses[activeStep]}
+          />
+        </>
+      ) : (
+        responseReceived &&
+        responseDetails && (
+          <Alert severity="warning">
+            No diagnoses were returned. Please check the patient information and try again.
+          </Alert>
+        )
       )}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
