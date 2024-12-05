@@ -4,7 +4,6 @@ import { Navigate, useRoutes } from 'react-router-dom';
 import { GuestGuard } from 'src/auth/guard';
 import AuthClassicLayout from 'src/layouts/auth/classic';
 
-// import { PATH_AFTER_LOGIN } from 'src/config-global';
 import { authRoutes } from './auth';
 import { mainRoutes } from './main';
 import { authDemoRoutes } from './auth-demo';
@@ -14,17 +13,11 @@ import { componentsRoutes } from './components';
 // ----------------------------------------------------------------------
 
 export default function Router() {
+  // Lazy-loaded login page for JWT authentication
   const JwtLoginPage = lazy(() => import('src/pages/auth/jwt/login'));
+
   return useRoutes([
-    // SET INDEX PAGE WITH SKIP HOME PAGE
-    // {
-    //   path: '/',
-    //   element: <Navigate to={PATH_AFTER_LOGIN} replace />,
-    // },
-
-    // ----------------------------------------------------------------------
-
-    // SET INDEX PAGE WITH HOME PAGE
+    // Root path redirects to the login page for guests
     {
       path: '/',
       element: (
@@ -36,11 +29,11 @@ export default function Router() {
       ),
     },
 
-    // Auth routes
+    // Authentication routes
     ...authRoutes,
     ...authDemoRoutes,
 
-    // Dashboard routes
+    // Dashboard routes (includes CRUD for users)
     ...dashboardRoutes,
 
     // Main routes
@@ -49,7 +42,7 @@ export default function Router() {
     // Components routes
     ...componentsRoutes,
 
-    // No match 404
+    // Catch-all route for 404 Not Found
     { path: '*', element: <Navigate to="/404" replace /> },
   ]);
 }

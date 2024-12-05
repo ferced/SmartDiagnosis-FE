@@ -12,7 +12,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
+import { Link as RouterLink } from 'react-router-dom'; // Corrige la importación de RouterLink directamente desde react-router-dom
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useBoolean } from 'src/hooks/use-boolean';
@@ -78,7 +78,7 @@ export default function JwtLoginView() {
       <Stack direction="row" spacing={0.5}>
         <Typography variant="body2">New user?</Typography>
 
-        <Link component={RouterLink} href={paths.auth.jwt.register} variant="subtitle2">
+        <Link component={RouterLink} to={paths.auth.jwt.register} variant="subtitle2">
           Create an account
         </Link>
       </Stack>
@@ -104,7 +104,14 @@ export default function JwtLoginView() {
         }}
       />
 
-      <Link variant="body2" color="inherit" underline="always" sx={{ alignSelf: 'flex-end' }}>
+      <Link
+        component={RouterLink}
+        to="/auth/forgot-password" // Ruta corregida para Forgot Password
+        variant="body2"
+        color="inherit"
+        underline="always"
+        sx={{ alignSelf: 'flex-end' }}
+      >
         Forgot password?
       </Link>
 
@@ -124,10 +131,6 @@ export default function JwtLoginView() {
   return (
     <>
       {renderHead}
-
-      {/* <Alert severity="info" sx={{ mb: 3 }}>
-        Use email : <strong>admin@ferced.com</strong> / password :<strong> demo1234</strong>
-      </Alert> */}
 
       {!!errorMsg && (
         <Alert severity="error" sx={{ mb: 3 }}>

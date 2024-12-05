@@ -65,11 +65,11 @@ export default function JwtRegisterView() {
 
   const onSubmit = handleSubmit(async (data) => {
     try {
-      await register?.(data.email, data.password, data.firstName, data.lastName);
-
+      console.log("Submitted data:", data); // Para depuración
+      await register?.(data.email, data.password, data.firstName, data.lastName); // Usamos email como identificador principal
       router.push(returnTo || PATH_AFTER_LOGIN);
     } catch (error) {
-      console.error(error);
+      console.error("Registration error:", error); // Mostrar el error en la consola
       reset();
       setErrorMsg(typeof error === 'string' ? error : error.message);
     }
@@ -119,7 +119,6 @@ export default function JwtRegisterView() {
       </Stack>
 
       <RHFTextField name="email" label="Email address" />
-
       <RHFTextField
         name="password"
         label="Password"
