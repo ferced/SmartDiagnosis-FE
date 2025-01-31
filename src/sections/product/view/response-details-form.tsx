@@ -4,22 +4,23 @@ import Stepper from 'react-stepper-horizontal';
 
 import { Healing, BarChart, Assignment } from '@mui/icons-material';
 import {
-  Box,
-  Card,
   Alert,
+  Box,
   Button,
-  Divider,
-  Collapse,
-  useTheme,
-  Snackbar,
-  TextField,
-  CardHeader,
-  Typography,
+  Card,
   CardContent,
-  CircularProgress,
+  CardHeader,
+  Collapse,
+  Divider,
+  Snackbar,
+  Typography,
+  useTheme,
 } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
+
+import FollowUpModal from '../../../components/modals/FollowUpModal';
+
 
 interface DiagnosisDetail {
   diagnosis: string;
@@ -202,61 +203,17 @@ export default function ResponseDetails({
           </Alert>
         )}
         {showFollowUp && (
-          <Box sx={{ mt: 3 }}>
-            <Card
-              raised
-              sx={{
-                maxWidth: '100%',
-                mx: 'auto',
-                mt: 5,
-                bgcolor: theme.palette.background.paper,
-                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                borderRadius: '8px',
-              }}
-            >
-              <CardHeader
-                title="Follow Up Questions"
-                titleTypographyProps={{ align: 'center', variant: 'h4' }}
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  color: theme.palette.common.white,
-                  paddingBottom: 3,
-                }}
-              />
-              <CardContent>
-                {responseDetails.follow_up_questions.map((question, qIdx) => (
-                  <Box key={qIdx} mb={3}>
-                    <Typography variant="h6">{question}</Typography>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={followUpAnswers[qIdx] || ''}
-                      onChange={(e) => {
-                        const newAnswers = [...followUpAnswers];
-                        newAnswers[qIdx] = e.target.value;
-                        setFollowUpAnswers(newAnswers);
-                      }}
-                      sx={{ mt: 1 }}
-                    />
-                  </Box>
-                ))}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleFollowUpSubmit}
-                  sx={{ mt: 2 }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Submit Follow Up Answers'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </Box>
-        )}
+  <FollowUpModal
+    isOpen={showFollowUp}
+    onClose={() => setShowFollowUp(false)}
+    followUpQuestions={responseDetails.follow_up_questions}
+    followUpAnswers={followUpAnswers}
+    setFollowUpAnswers={setFollowUpAnswers}
+    handleSubmit={handleFollowUpSubmit}
+    isLoading={isLoading}
+  />
+)}
+
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
         <Button
