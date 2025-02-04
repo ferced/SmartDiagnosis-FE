@@ -2,18 +2,31 @@ import axios from 'axios';
 import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
-import { Healing, BarChart, Assignment } from '@mui/icons-material';
+import {
+  Healing,
+  Science,
+  BarChart,
+  Assignment,
+  WarningAmber,
+} from '@mui/icons-material';
+
 import {
   Box,
   Card,
   Alert,
+  Badge,
+  Paper,
+  Slide,
+  Stack,
   Button,
   Divider,
+  Tooltip,
   Collapse,
-  useTheme,
   Snackbar,
+  useTheme,
   TextField,
   CardHeader,
+  IconButton,
   Typography,
   CardContent,
   CircularProgress,
@@ -25,14 +38,15 @@ interface DiagnosisDetail {
   diagnosis: string;
   treatment: string;
   probability: string;
+  prevalence?: string;
 }
 
 interface DiagnosisResponseDetails {
   disclaimer: string;
-  diagnoses: DiagnosisDetail[];
+  common_diagnoses: DiagnosisDetail[];
+  rare_diagnoses?: DiagnosisDetail[];
   follow_up_questions: string[];
 }
-
 interface ResponseDetailsProps {
   responseDetails: DiagnosisResponseDetails;
   activeStep: number;
@@ -45,6 +59,59 @@ interface ResponseDetailsProps {
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
+}
+
+function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
+  const cardTheme = useTheme(); // Add this line
+
+  return (
+    <Card
+      sx={{
+        mb: 2,
+        bgcolor: 'background.neutral',
+        borderLeft: `6px solid ${cardTheme.palette.warning.main}`, // Remove the theme parameter
+      }}
+    >
+      <CardContent>
+        <Stack spacing={2}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Science color="warning" />
+            <Typography variant="subtitle1" fontWeight="bold">
+              {details.diagnosis}
+            </Typography>
+          </Box>
+
+          {details.prevalence && (
+            <Box
+              sx={{
+                bgcolor: 'warning.lighter',
+                p: 1,
+                borderRadius: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                maxWidth: 'fit-content'
+              }}
+            >
+              <WarningAmber fontSize="small" color="warning" />
+              <Typography variant="caption" color="warning.darker">
+                Prevalence: {details.prevalence}
+              </Typography>
+            </Box>
+          )}
+
+          <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Probability: {details.probability}
+            </Typography>
+            <Typography variant="body2">
+              {details.treatment}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ResponseDetails({
@@ -65,6 +132,8 @@ export default function ResponseDetails({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ question: string; answer: string }>
   >([]);
+  const [showRareDiseases, setShowRareDiseases] = useState(false);
+
 
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
@@ -126,7 +195,7 @@ export default function ResponseDetails({
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={responseDetails.diagnoses.map((_, idx) => ({
+        steps={responseDetails.common_diagnoses.map((_, idx) => ({
           title: `Diagnosis ${idx + 1}`,
         }))}
         activeStep={activeStep}
@@ -141,7 +210,7 @@ export default function ResponseDetails({
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {responseDetails.diagnoses.map((details: DiagnosisDetail, idx: number) => (
+        {responseDetails.common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
           <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
@@ -195,7 +264,7 @@ export default function ResponseDetails({
             </Card>
           </Collapse>
         ))}
-        {responseDetails.diagnoses.length === 1 && (
+        {responseDetails.common_diagnoses.length === 1 && (
           <Alert severity="info" sx={{ mt: 2 }}>
             Only one diagnosis remains after the follow-up. This is the most probable diagnosis
             based on the provided information.
@@ -270,7 +339,7 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
-        {responseDetails.diagnoses.length > 1 && (
+        {responseDetails.common_diagnoses.length > 1 && (
           <Button
             variant="contained"
             color="primary"
@@ -283,14 +352,100 @@ export default function ResponseDetails({
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === responseDetails.diagnoses.length - 1}
+          disabled={activeStep === responseDetails.common_diagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, responseDetails.diagnoses.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, responseDetails.common_diagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >
           Next
         </Button>
+        {responseDetails.rare_diagnoses && responseDetails.rare_diagnoses.length > 0 && (
+          <>
+            <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
+              <IconButton
+                onClick={() => setShowRareDiseases(prev => !prev)}
+                sx={{
+                  position: 'fixed',
+                  right: showRareDiseases ? 480 : 20,
+                  bottom: 20,
+                  width: 48,
+                  height: 48,
+                  bgcolor: theme.palette.background.paper,
+                  boxShadow: `0 8px 32px -4px ${theme.palette.grey[200]}`,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.background.paper,
+                    transform: 'scale(1.05)',
+                    boxShadow: `0 12px 40px -8px ${theme.palette.grey[300]}`,
+                  },
+                }}
+              >
+                <Badge
+                  badgeContent={responseDetails.rare_diagnoses.length}
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: theme.palette.error.main,
+                      boxShadow: `0 2px 12px -2px ${theme.palette.error.main}`,
+                    },
+                  }}
+                >
+                  <Science
+                    sx={{
+                      color: theme.palette.text.primary,
+                      opacity: 0.8,
+                      fontSize: 24
+                    }}
+                  />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Slide direction="left" in={showRareDiseases} mountOnEnter unmountOnExit>
+              <Paper
+                elevation={0}
+                sx={{
+                  position: 'fixed',
+                  right: 0,
+                  top: 0,
+                  width: 480,  // Increased from 320
+                  height: '100vh',
+                  overflowY: 'auto',
+                  bgcolor: theme.palette.background.paper,
+                  borderLeft: `1px solid ${theme.palette.divider}`,
+                  p: 4,  // Increased padding
+                  zIndex: 1200,
+                }}
+              >
+                <Stack spacing={3}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Science
+                      color="warning"
+                      sx={{ fontSize: 28 }}  // Slightly larger icon
+                    />
+                    <Typography variant="h5">Rare Disease Considerations</Typography>
+                  </Box>
+
+                  <Alert
+                    severity="info"
+                    sx={{
+                      mb: 2,
+                      '& .MuiAlert-message': {
+                        fontSize: '0.95rem'
+                      }
+                    }}
+                  >
+                    These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
+                  </Alert>
+
+                  {responseDetails.rare_diagnoses.map((rareDiagnosis, index) => (
+                    <RareDiseaseCard key={index} details={rareDiagnosis} />
+                  ))}
+                </Stack>
+              </Paper>
+            </Slide>
+          </>
+        )}
       </Box>
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>

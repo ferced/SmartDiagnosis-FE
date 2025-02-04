@@ -23,7 +23,8 @@ interface DiagnosisDetail {
 
 interface DiagnosisResponseDetails {
   disclaimer: string;
-  diagnoses: DiagnosisDetail[];
+  common_diagnoses: DiagnosisDetail[];  // Changed from diagnoses
+  rare_diagnoses?: DiagnosisDetail[];   // Optional new field
   follow_up_questions: string[];
 }
 
@@ -112,38 +113,38 @@ export default function PatientForm() {
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
       )}
       {responseReceived &&
-      responseDetails &&
-      responseDetails.diagnoses &&
-      responseDetails.diagnoses.length > 0 ? (
-        <>
-          <ResponseDetails
-            responseDetails={responseDetails}
-            activeStep={activeStep}
-            setActiveStep={setActiveStep}
-            showFollowUp={showFollowUp}
-            setShowFollowUp={setShowFollowUp}
-            followUpAnswers={followUpAnswers}
-            setFollowUpAnswers={setFollowUpAnswers}
-            originalPatientInfo={originalPatientInfo}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-            setResponseDetails={setResponseDetails}
-          />
-          <ChatBox
-            question={question}
-            setQuestion={setQuestion}
-            originalPatientInfo={originalPatientInfo}
-            initialResponse={responseDetails.diagnoses[activeStep]}
-          />
-        </>
-      ) : (
-        responseReceived &&
-        responseDetails && (
-          <Alert severity="warning">
-            No diagnoses were returned. Please check the patient information and try again.
-          </Alert>
-        )
-      )}
+  responseDetails &&
+  responseDetails.common_diagnoses &&    // Changed from diagnoses
+  responseDetails.common_diagnoses.length > 0 ? (  // Changed from diagnoses
+  <>
+    <ResponseDetails
+      responseDetails={responseDetails}
+      activeStep={activeStep}
+      setActiveStep={setActiveStep}
+      showFollowUp={showFollowUp}
+      setShowFollowUp={setShowFollowUp}
+      followUpAnswers={followUpAnswers}
+      setFollowUpAnswers={setFollowUpAnswers}
+      originalPatientInfo={originalPatientInfo}
+      isLoading={isLoading}
+      setIsLoading={setIsLoading}
+      setResponseDetails={setResponseDetails}
+    />
+    <ChatBox
+      question={question}
+      setQuestion={setQuestion}
+      originalPatientInfo={originalPatientInfo}
+      initialResponse={responseDetails.common_diagnoses[activeStep]}  // Changed from diagnoses
+    />
+  </>
+) : (
+  responseReceived &&
+  responseDetails && (
+    <Alert severity="warning">
+      No diagnoses were returned. Please check the patient information and try again.
+    </Alert>
+  )
+)}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
           {error}
