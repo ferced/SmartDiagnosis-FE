@@ -9,7 +9,6 @@ import {
   Assignment,
   WarningAmber,
 } from '@mui/icons-material';
-
 import {
   Box,
   Card,
@@ -34,32 +33,8 @@ import {
 
 import { HOST_API } from 'src/config-global';
 
-interface DiagnosisDetail {
-  diagnosis: string;
-  treatment: string;
-  probability: string;
-  prevalence?: string;
-}
+import { DiagnosisDetail, ResponseDetailsProps } from './types';
 
-interface DiagnosisResponseDetails {
-  disclaimer: string;
-  common_diagnoses: DiagnosisDetail[];
-  rare_diagnoses?: DiagnosisDetail[];
-  follow_up_questions: string[];
-}
-interface ResponseDetailsProps {
-  responseDetails: DiagnosisResponseDetails;
-  activeStep: number;
-  setActiveStep: React.Dispatch<React.SetStateAction<number>>;
-  showFollowUp: boolean;
-  setShowFollowUp: React.Dispatch<React.SetStateAction<boolean>>;
-  followUpAnswers: string[];
-  setFollowUpAnswers: React.Dispatch<React.SetStateAction<string[]>>;
-  originalPatientInfo: any;
-  isLoading: boolean;
-  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
-}
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
   const cardTheme = useTheme(); // Add this line
@@ -133,54 +108,75 @@ export default function ResponseDetails({
     Array<{ question: string; answer: string }>
   >([]);
   const [showRareDiseases, setShowRareDiseases] = useState(false);
-
-
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
-
+  
     const token = sessionStorage.getItem('accessToken');
-
+  
     if (!token) {
       console.error('No access token found in sessionStorage');
       setError('No access token found in sessionStorage');
       setIsLoading(false);
       return;
     }
-
+  
     try {
       // Update conversation history
       const newConversationEntries = responseDetails.follow_up_questions.map((question, index) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
-
+  
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
-
+  
       const followUpRequest = {
-        originalPatientInfo,
-        initialResponse: responseDetails,
+        originalPatientInfo: {
+          ...originalPatientInfo,
+          patientName: originalPatientInfo.patientName || '',
+          age: parseInt(originalPatientInfo.age, 10) || 0,
+          gender: originalPatientInfo.gender || '',
+          symptoms: originalPatientInfo.symptoms || '',
+          medicalHistory: originalPatientInfo.medicalHistory || '',
+          allergies: originalPatientInfo.allergies || '',
+          currentMedications: originalPatientInfo.currentMedications || ''
+        },
+        initialResponse: {
+          disclaimer: responseDetails.disclaimer,
+          diagnoses: responseDetails.common_diagnoses,
+          follow_up_questions: responseDetails.follow_up_questions
+        },
         followUpAnswers,
-        conversationHistory: updatedConversationHistory,
+        conversationHistory: updatedConversationHistory.map(entry => ({
+          question: entry.question,
+          response: entry.answer
+        }))
       };
-
+      
       const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
+      // Check if the response has the expected structure
+      if (!response.data || !response.data.common_diagnoses) {
+        throw new Error('Invalid response format from server');
+      }
+  
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
-
-      if (response.data.diagnoses.length === 1) {
+  
+      // Check common_diagnoses instead of diagnoses
+      if (response.data.common_diagnoses.length === 1) {
         // Optionally display a message or handle the final diagnosis
       }
     } catch (err) {
-      console.error(err.response ? err.response.data : err.message);
+      console.error('Error in handleFollowUpSubmit:', err);
+      console.error('Error response:', err.response?.data);
       setError(
         typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
       );
@@ -349,7 +345,7 @@ export default function ResponseDetails({
             Follow Up Questions
           </Button>
         )}
-        <Button
+         <Button
           variant="contained"
           color="primary"
           disabled={activeStep === responseDetails.common_diagnoses.length - 1}
@@ -360,7 +356,7 @@ export default function ResponseDetails({
         >
           Next
         </Button>
-        {responseDetails.rare_diagnoses && responseDetails.rare_diagnoses.length > 0 && (
+        {responseDetails.rare_diagnoses && Array.isArray(responseDetails.rare_diagnoses) && responseDetails.rare_diagnoses.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
               <IconButton
@@ -408,12 +404,12 @@ export default function ResponseDetails({
                   position: 'fixed',
                   right: 0,
                   top: 0,
-                  width: 480,  // Increased from 320
+                  width: 480,
                   height: '100vh',
                   overflowY: 'auto',
                   bgcolor: theme.palette.background.paper,
                   borderLeft: `1px solid ${theme.palette.divider}`,
-                  p: 4,  // Increased padding
+                  p: 4,
                   zIndex: 1200,
                 }}
               >
@@ -421,7 +417,7 @@ export default function ResponseDetails({
                   <Box display="flex" alignItems="center" gap={2}>
                     <Science
                       color="warning"
-                      sx={{ fontSize: 28 }}  // Slightly larger icon
+                      sx={{ fontSize: 28 }}
                     />
                     <Typography variant="h5">Rare Disease Considerations</Typography>
                   </Box>

@@ -13,20 +13,8 @@ import FormProvider from 'src/components/hook-form';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
-import ResponseDetails from './response-details-form';
-
-interface DiagnosisDetail {
-  diagnosis: string;
-  treatment: string;
-  probability: string;
-}
-
-interface DiagnosisResponseDetails {
-  disclaimer: string;
-  common_diagnoses: DiagnosisDetail[];  // Changed from diagnoses
-  rare_diagnoses?: DiagnosisDetail[];   // Optional new field
-  follow_up_questions: string[];
-}
+import { DiagnosisResponseDetails } from './types';
+import ResponseDetails from './response-details-form';  // Import the shared types
 
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
@@ -63,11 +51,9 @@ export default function PatientForm() {
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     setOriginalPatientInfo(data);
-
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
-
     if (!token) {
       console.error('No access token found in sessionStorage');
       setError('No access token found in sessionStorage');
@@ -87,10 +73,8 @@ export default function PatientForm() {
         },
       });
 
-      console.log('Response Details:', response.data);
-
       setResponseDetails(response.data);
-      setActiveStep(0); // Reset to the first diagnosis
+      setActiveStep(0);
       setIsLoading(false);
       setResponseReceived(true);
       reset();
@@ -113,38 +97,38 @@ export default function PatientForm() {
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
       )}
       {responseReceived &&
-  responseDetails &&
-  responseDetails.common_diagnoses &&    // Changed from diagnoses
-  responseDetails.common_diagnoses.length > 0 ? (  // Changed from diagnoses
-  <>
-    <ResponseDetails
-      responseDetails={responseDetails}
-      activeStep={activeStep}
-      setActiveStep={setActiveStep}
-      showFollowUp={showFollowUp}
-      setShowFollowUp={setShowFollowUp}
-      followUpAnswers={followUpAnswers}
-      setFollowUpAnswers={setFollowUpAnswers}
-      originalPatientInfo={originalPatientInfo}
-      isLoading={isLoading}
-      setIsLoading={setIsLoading}
-      setResponseDetails={setResponseDetails}
-    />
-    <ChatBox
-      question={question}
-      setQuestion={setQuestion}
-      originalPatientInfo={originalPatientInfo}
-      initialResponse={responseDetails.common_diagnoses[activeStep]}  // Changed from diagnoses
-    />
-  </>
-) : (
-  responseReceived &&
-  responseDetails && (
-    <Alert severity="warning">
-      No diagnoses were returned. Please check the patient information and try again.
-    </Alert>
-  )
-)}
+        responseDetails &&
+        responseDetails.common_diagnoses &&
+        responseDetails.common_diagnoses.length > 0 ? (
+        <>
+          <ResponseDetails
+            responseDetails={responseDetails}
+            activeStep={activeStep}
+            setActiveStep={setActiveStep}
+            showFollowUp={showFollowUp}
+            setShowFollowUp={setShowFollowUp}
+            followUpAnswers={followUpAnswers}
+            setFollowUpAnswers={setFollowUpAnswers}
+            originalPatientInfo={originalPatientInfo}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+            setResponseDetails={setResponseDetails}
+          />
+          <ChatBox
+            question={question}
+            setQuestion={setQuestion}
+            originalPatientInfo={originalPatientInfo}
+            initialResponse={responseDetails.common_diagnoses[activeStep]}
+          />
+        </>
+      ) : (
+        responseReceived &&
+        responseDetails && (
+          <Alert severity="warning">
+            No diagnoses were returned. Please check the patient information and try again.
+          </Alert>
+        )
+      )}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
           {error}
