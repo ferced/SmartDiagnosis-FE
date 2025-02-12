@@ -10,9 +10,9 @@ import {
   WarningAmber,
 } from '@mui/icons-material';
 import {
-  Alert,
   Box,
   Card,
+  Alert,
   Badge,
   Paper,
   Slide,
@@ -23,24 +23,16 @@ import {
   Collapse,
   Snackbar,
   useTheme,
-  TextField,
   CardHeader,
-  CardContent,
   IconButton,
   Typography,
-  useTheme,
+  CardContent,
 } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
-import FollowUpModal from '../../../components/modals/FollowUpModal';
 import { DiagnosisDetail, ResponseDetailsProps } from './types';
-
-interface DiagnosisDetail {
-  diagnosis: string;
-  treatment: string;
-  probability: string;
-}
+import FollowUpModal from '../../../components/modals/FollowUpModal';
 
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
