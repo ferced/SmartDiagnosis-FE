@@ -38,6 +38,7 @@ import { DiagnosisDetail, ResponseDetailsProps } from './types';
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
   const cardTheme = useTheme(); // Add this line
+  const [additionalInfo, setAdditionalInfo] = useState('');
 
   return (
     <Card
@@ -108,28 +109,38 @@ export default function ResponseDetails({
     Array<{ question: string; answer: string }>
   >([]);
   const [showRareDiseases, setShowRareDiseases] = useState(false);
-  const handleFollowUpSubmit = async () => {
+  const [additionalInfo, setAdditionalInfo] = useState('');
+
+const handleFollowUpSubmit = async () => {
     setIsLoading(true);
-  
+
     const token = sessionStorage.getItem('accessToken');
-  
+
     if (!token) {
       console.error('No access token found in sessionStorage');
       setError('No access token found in sessionStorage');
       setIsLoading(false);
       return;
     }
-  
+
     try {
       // Update conversation history
       const newConversationEntries = responseDetails.follow_up_questions.map((question, index) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
-  
+
+      // Agregar la entrada de "Add more information" si se ingresó algo
+      if (additionalInfo.trim() !== '') {
+        newConversationEntries.push({
+          question: 'Additional Information',
+          answer: additionalInfo.trim(),
+        });
+      }
+
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
-  
+
       const followUpRequest = {
         originalPatientInfo: {
           ...originalPatientInfo,
@@ -146,31 +157,32 @@ export default function ResponseDetails({
           diagnoses: responseDetails.common_diagnoses,
           follow_up_questions: responseDetails.follow_up_questions
         },
-        followUpAnswers,
+        followUpAnswers,  // Respuestas normales
+        additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
         conversationHistory: updatedConversationHistory.map(entry => ({
           question: entry.question,
           response: entry.answer
         }))
       };
-      
+
       const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       // Check if the response has the expected structure
       if (!response.data || !response.data.common_diagnoses) {
         throw new Error('Invalid response format from server');
       }
-  
+
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
+      setAdditionalInfo('');  // Resetear el campo adicional después de enviar
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
-  
-      // Check common_diagnoses instead of diagnoses
+
       if (response.data.common_diagnoses.length === 1) {
         // Optionally display a message or handle the final diagnosis
       }
@@ -183,6 +195,7 @@ export default function ResponseDetails({
       setIsLoading(false);
     }
   };
+
 
   const handleCloseSnackbar = () => {
     setError(null);
@@ -305,6 +318,22 @@ export default function ResponseDetails({
                     />
                   </Box>
                 ))}
+
+                {/* Campo adicional para ingresar más información */}
+                <Box mt={3}>
+                  <Typography variant="h6">Add more information</Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    variant="outlined"
+                    value={additionalInfo}
+                    onChange={(e) => setAdditionalInfo(e.target.value)}
+                    placeholder="Enter additional details here..."
+                    sx={{ mt: 1 }}
+                  />
+                </Box>
+
                 <Button
                   variant="contained"
                   color="primary"
@@ -320,6 +349,7 @@ export default function ResponseDetails({
                 </Button>
               </CardContent>
             </Card>
+
           </Box>
         )}
       </Box>
@@ -345,7 +375,7 @@ export default function ResponseDetails({
             Follow Up Questions
           </Button>
         )}
-         <Button
+        <Button
           variant="contained"
           color="primary"
           disabled={activeStep === responseDetails.common_diagnoses.length - 1}
