@@ -2,17 +2,31 @@ import axios from 'axios';
 import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
-import { Healing, BarChart, Assignment } from '@mui/icons-material';
+import {
+  Healing,
+  Science,
+  BarChart,
+  Assignment,
+  WarningAmber,
+} from '@mui/icons-material';
 import {
   Alert,
   Box,
-  Button,
   Card,
-  CardContent,
-  CardHeader,
-  Collapse,
+  Badge,
+  Paper,
+  Slide,
+  Stack,
+  Button,
   Divider,
+  Tooltip,
+  Collapse,
   Snackbar,
+  useTheme,
+  TextField,
+  CardHeader,
+  CardContent,
+  IconButton,
   Typography,
   useTheme,
 } from '@mui/material';
@@ -20,7 +34,7 @@ import {
 import { HOST_API } from 'src/config-global';
 
 import FollowUpModal from '../../../components/modals/FollowUpModal';
-
+import { DiagnosisDetail, ResponseDetailsProps } from './types';
 
 interface DiagnosisDetail {
   diagnosis: string;
@@ -28,24 +42,58 @@ interface DiagnosisDetail {
   probability: string;
 }
 
-interface DiagnosisResponseDetails {
-  disclaimer: string;
-  diagnoses: DiagnosisDetail[];
-  follow_up_questions: string[];
-}
 
-interface ResponseDetailsProps {
-  responseDetails: DiagnosisResponseDetails;
-  activeStep: number;
-  setActiveStep: React.Dispatch<React.SetStateAction<number>>;
-  showFollowUp: boolean;
-  setShowFollowUp: React.Dispatch<React.SetStateAction<boolean>>;
-  followUpAnswers: string[];
-  setFollowUpAnswers: React.Dispatch<React.SetStateAction<string[]>>;
-  originalPatientInfo: any;
-  isLoading: boolean;
-  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
+function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
+  const cardTheme = useTheme(); 
+
+  return (
+    <Card
+      sx={{
+        mb: 2,
+        bgcolor: 'background.neutral',
+        borderLeft: `6px solid ${cardTheme.palette.warning.main}`, // Remove the theme parameter
+      }}
+    >
+      <CardContent>
+        <Stack spacing={2}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Science color="warning" />
+            <Typography variant="subtitle1" fontWeight="bold">
+              {details.diagnosis}
+            </Typography>
+          </Box>
+
+          {details.prevalence && (
+            <Box
+              sx={{
+                bgcolor: 'warning.lighter',
+                p: 1,
+                borderRadius: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                maxWidth: 'fit-content'
+              }}
+            >
+              <WarningAmber fontSize="small" color="warning" />
+              <Typography variant="caption" color="warning.darker">
+                Prevalence: {details.prevalence}
+              </Typography>
+            </Box>
+          )}
+
+          <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Probability: {details.probability}
+            </Typography>
+            <Typography variant="body2">
+              {details.treatment}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ResponseDetails({
@@ -66,8 +114,10 @@ export default function ResponseDetails({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ question: string; answer: string }>
   >([]);
+  const [showRareDiseases, setShowRareDiseases] = useState(false);
+  const [additionalInfo, setAdditionalInfo] = useState('');
 
-  const handleFollowUpSubmit = async () => {
+const handleFollowUpSubmit = async () => {
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
@@ -86,14 +136,39 @@ export default function ResponseDetails({
         answer: followUpAnswers[index] || '',
       }));
 
+      // Agregar la entrada de "Add more information" si se ingresó algo
+      if (additionalInfo.trim() !== '') {
+        newConversationEntries.push({
+          question: 'Additional Information',
+          answer: additionalInfo.trim(),
+        });
+      }
+
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
 
       const followUpRequest = {
-        originalPatientInfo,
-        initialResponse: responseDetails,
-        followUpAnswers,
-        conversationHistory: updatedConversationHistory,
+        originalPatientInfo: {
+          ...originalPatientInfo,
+          patientName: originalPatientInfo.patientName || '',
+          age: parseInt(originalPatientInfo.age, 10) || 0,
+          gender: originalPatientInfo.gender || '',
+          symptoms: originalPatientInfo.symptoms || '',
+          medicalHistory: originalPatientInfo.medicalHistory || '',
+          allergies: originalPatientInfo.allergies || '',
+          currentMedications: originalPatientInfo.currentMedications || ''
+        },
+        initialResponse: {
+          disclaimer: responseDetails.disclaimer,
+          diagnoses: responseDetails.common_diagnoses,
+          follow_up_questions: responseDetails.follow_up_questions
+        },
+        followUpAnswers,  // Respuestas normales
+        additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
+        conversationHistory: updatedConversationHistory.map(entry => ({
+          question: entry.question,
+          response: entry.answer
+        }))
       };
 
       const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
@@ -102,23 +177,31 @@ export default function ResponseDetails({
         },
       });
 
+      // Check if the response has the expected structure
+      if (!response.data || !response.data.common_diagnoses) {
+        throw new Error('Invalid response format from server');
+      }
+
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
+      setAdditionalInfo('');  // Resetear el campo adicional después de enviar
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
 
-      if (response.data.diagnoses.length === 1) {
+      if (response.data.common_diagnoses.length === 1) {
         // Optionally display a message or handle the final diagnosis
       }
     } catch (err) {
-      console.error(err.response ? err.response.data : err.message);
+      console.error('Error in handleFollowUpSubmit:', err);
+      console.error('Error response:', err.response?.data);
       setError(
         typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
       );
       setIsLoading(false);
     }
   };
+
 
   const handleCloseSnackbar = () => {
     setError(null);
@@ -127,7 +210,7 @@ export default function ResponseDetails({
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={responseDetails.diagnoses.map((_, idx) => ({
+        steps={responseDetails.common_diagnoses.map((_, idx) => ({
           title: `Diagnosis ${idx + 1}`,
         }))}
         activeStep={activeStep}
@@ -142,7 +225,7 @@ export default function ResponseDetails({
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {responseDetails.diagnoses.map((details: DiagnosisDetail, idx: number) => (
+        {responseDetails.common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
           <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
@@ -196,7 +279,7 @@ export default function ResponseDetails({
             </Card>
           </Collapse>
         ))}
-        {responseDetails.diagnoses.length === 1 && (
+        {responseDetails.common_diagnoses.length === 1 && (
           <Alert severity="info" sx={{ mt: 2 }}>
             Only one diagnosis remains after the follow-up. This is the most probable diagnosis
             based on the provided information.
@@ -227,7 +310,7 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
-        {responseDetails.diagnoses.length > 1 && (
+        {responseDetails.common_diagnoses.length > 1 && (
           <Button
             variant="contained"
             color="primary"
@@ -240,14 +323,100 @@ export default function ResponseDetails({
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === responseDetails.diagnoses.length - 1}
+          disabled={activeStep === responseDetails.common_diagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, responseDetails.diagnoses.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, responseDetails.common_diagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >
           Next
         </Button>
+        {responseDetails.rare_diagnoses && Array.isArray(responseDetails.rare_diagnoses) && responseDetails.rare_diagnoses.length > 0 && (
+          <>
+            <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
+              <IconButton
+                onClick={() => setShowRareDiseases(prev => !prev)}
+                sx={{
+                  position: 'fixed',
+                  right: showRareDiseases ? 480 : 20,
+                  bottom: 20,
+                  width: 48,
+                  height: 48,
+                  bgcolor: theme.palette.background.paper,
+                  boxShadow: `0 8px 32px -4px ${theme.palette.grey[200]}`,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.background.paper,
+                    transform: 'scale(1.05)',
+                    boxShadow: `0 12px 40px -8px ${theme.palette.grey[300]}`,
+                  },
+                }}
+              >
+                <Badge
+                  badgeContent={responseDetails.rare_diagnoses.length}
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: theme.palette.error.main,
+                      boxShadow: `0 2px 12px -2px ${theme.palette.error.main}`,
+                    },
+                  }}
+                >
+                  <Science
+                    sx={{
+                      color: theme.palette.text.primary,
+                      opacity: 0.8,
+                      fontSize: 24
+                    }}
+                  />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Slide direction="left" in={showRareDiseases} mountOnEnter unmountOnExit>
+              <Paper
+                elevation={0}
+                sx={{
+                  position: 'fixed',
+                  right: 0,
+                  top: 0,
+                  width: 480,
+                  height: '100vh',
+                  overflowY: 'auto',
+                  bgcolor: theme.palette.background.paper,
+                  borderLeft: `1px solid ${theme.palette.divider}`,
+                  p: 4,
+                  zIndex: 1200,
+                }}
+              >
+                <Stack spacing={3}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Science
+                      color="warning"
+                      sx={{ fontSize: 28 }}
+                    />
+                    <Typography variant="h5">Rare Disease Considerations</Typography>
+                  </Box>
+
+                  <Alert
+                    severity="info"
+                    sx={{
+                      mb: 2,
+                      '& .MuiAlert-message': {
+                        fontSize: '0.95rem'
+                      }
+                    }}
+                  >
+                    These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
+                  </Alert>
+
+                  {responseDetails.rare_diagnoses.map((rareDiagnosis, index) => (
+                    <RareDiseaseCard key={index} details={rareDiagnosis} />
+                  ))}
+                </Stack>
+              </Paper>
+            </Slide>
+          </>
+        )}
       </Box>
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>

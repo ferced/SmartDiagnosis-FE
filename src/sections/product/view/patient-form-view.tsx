@@ -13,19 +13,8 @@ import FormProvider from 'src/components/hook-form';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
-import ResponseDetails from './response-details-form';
-
-interface DiagnosisDetail {
-  diagnosis: string;
-  treatment: string;
-  probability: string;
-}
-
-interface DiagnosisResponseDetails {
-  disclaimer: string;
-  diagnoses: DiagnosisDetail[];
-  follow_up_questions: string[];
-}
+import { DiagnosisResponseDetails } from './types';
+import ResponseDetails from './response-details-form';  // Import the shared types
 
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
@@ -62,11 +51,9 @@ export default function PatientForm() {
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     setOriginalPatientInfo(data);
-
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
-
     if (!token) {
       console.error('No access token found in sessionStorage');
       setError('No access token found in sessionStorage');
@@ -86,10 +73,8 @@ export default function PatientForm() {
         },
       });
 
-      console.log('Response Details:', response.data);
-
       setResponseDetails(response.data);
-      setActiveStep(0); // Reset to the first diagnosis
+      setActiveStep(0);
       setIsLoading(false);
       setResponseReceived(true);
       reset();
@@ -112,9 +97,9 @@ export default function PatientForm() {
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
       )}
       {responseReceived &&
-      responseDetails &&
-      responseDetails.diagnoses &&
-      responseDetails.diagnoses.length > 0 ? (
+        responseDetails &&
+        responseDetails.common_diagnoses &&
+        responseDetails.common_diagnoses.length > 0 ? (
         <>
           <ResponseDetails
             responseDetails={responseDetails}
@@ -133,7 +118,7 @@ export default function PatientForm() {
             question={question}
             setQuestion={setQuestion}
             originalPatientInfo={originalPatientInfo}
-            initialResponse={responseDetails.diagnoses[activeStep]}
+            initialResponse={responseDetails.common_diagnoses[activeStep]}
           />
         </>
       ) : (
