@@ -37,8 +37,7 @@ import { DiagnosisDetail, ResponseDetailsProps } from './types';
 
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
-  const cardTheme = useTheme(); // Add this line
-  const [additionalInfo, setAdditionalInfo] = useState('');
+  const cardTheme = useTheme(); 
 
   return (
     <Card
