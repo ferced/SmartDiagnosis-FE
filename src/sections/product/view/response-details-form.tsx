@@ -107,9 +107,8 @@ export default function ResponseDetails({
     Array<{ question: string; answer: string }>
   >([]);
   const [showRareDiseases, setShowRareDiseases] = useState(false);
-  const [additionalInfo, setAdditionalInfo] = useState('');
 
-const handleFollowUpSubmit = async () => {
+  const handleFollowUpSubmit = async (additionalInfo: string) => { // ✅ Ahora recibe additionalInfo
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
@@ -128,7 +127,7 @@ const handleFollowUpSubmit = async () => {
         answer: followUpAnswers[index] || '',
       }));
 
-      // Agregar la entrada de "Add more information" si se ingresó algo
+      // Agregar "Additional Information" si se ingresó algo
       if (additionalInfo.trim() !== '') {
         newConversationEntries.push({
           question: 'Additional Information',
@@ -155,8 +154,8 @@ const handleFollowUpSubmit = async () => {
           diagnoses: responseDetails.common_diagnoses,
           follow_up_questions: responseDetails.follow_up_questions
         },
-        followUpAnswers,  // Respuestas normales
-        additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
+        followUpAnswers,
+        additionalInfo: additionalInfo.trim(), // ✅ Se envía correctamente
         conversationHistory: updatedConversationHistory.map(entry => ({
           question: entry.question,
           response: entry.answer
@@ -169,21 +168,15 @@ const handleFollowUpSubmit = async () => {
         },
       });
 
-      // Check if the response has the expected structure
       if (!response.data || !response.data.common_diagnoses) {
         throw new Error('Invalid response format from server');
       }
 
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
-      setAdditionalInfo('');  // Resetear el campo adicional después de enviar
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
-
-      if (response.data.common_diagnoses.length === 1) {
-        // Optionally display a message or handle the final diagnosis
-      }
     } catch (err) {
       console.error('Error in handleFollowUpSubmit:', err);
       console.error('Error response:', err.response?.data);
@@ -192,9 +185,7 @@ const handleFollowUpSubmit = async () => {
       );
       setIsLoading(false);
     }
-  };
-
-
+};
   const handleCloseSnackbar = () => {
     setError(null);
   };
