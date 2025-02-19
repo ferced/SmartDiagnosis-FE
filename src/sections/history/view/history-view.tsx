@@ -1,19 +1,21 @@
-import { useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
+import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import axios from 'axios';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
 import { HOST_API } from 'src/config-global';
 
 import Iconify from 'src/components/iconify';
@@ -53,8 +55,8 @@ export default function HistoryView() {
 
   // Table state
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  const [orderBy, setOrderBy] = useState('created_at');
+  const [order] = useState<'asc' | 'desc'>('desc');
+  const [orderBy] = useState('created_at');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -73,7 +75,6 @@ export default function HistoryView() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem('accessToken');
-      
       if (!token) {
         throw new Error('No access token found in sessionStorage');
       }
@@ -84,8 +85,9 @@ export default function HistoryView() {
         },
       });
 
-      setConversations(response.data);
-    } catch (err) {
+      // Aseguramos que 'conversations' sea siempre un array
+      setConversations(Array.isArray(response.data) ? response.data : []);
+    } catch (err: any) {
       console.error('Error fetching conversations:', err);
       setError(err.response?.data?.message || 'Error fetching conversations');
     } finally {
@@ -97,7 +99,7 @@ export default function HistoryView() {
     fetchConversations();
   }, []);
 
-      const handleViewRow = useCallback(
+  const handleViewRow = useCallback(
     (id: number) => {
       router.push(paths.dashboard.history.conversation(id));
     },
@@ -142,7 +144,9 @@ export default function HistoryView() {
         )
       );
 
-      setConversations((prev) => prev.filter((row) => !selected.includes(row.id.toString())));
+      setConversations((prev) =>
+        prev.filter((row) => !selected.includes(row.id.toString()))
+      );
       setSelected([]);
     } catch (err) {
       console.error('Error deleting conversations:', err);
@@ -152,7 +156,7 @@ export default function HistoryView() {
 
   const generateTitle = (conversation: Conversation) => {
     if (conversation.title) return conversation.title;
-    
+
     const date = new Date(conversation.created_at);
     return `Conversation ${conversation.id} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   };
@@ -179,7 +183,11 @@ export default function HistoryView() {
               numSelected={selected.length}
               rowCount={conversations.length}
               onSelectAllRows={(checked) =>
-                setSelected(checked ? conversations.map((row) => row.id.toString()) : [])
+                setSelected(
+                  checked
+                    ? conversations.map((row) => row.id.toString())
+                    : []
+                )
               }
               action={
                 <Stack direction="row" spacing={1.5}>
@@ -194,7 +202,10 @@ export default function HistoryView() {
           )}
 
           <Scrollbar>
-            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 800 }}>
+            <Table
+              size={table.dense ? 'small' : 'medium'}
+              sx={{ minWidth: 800 }}
+            >
               <TableHeadCustom
                 order={order}
                 orderBy={orderBy}
@@ -203,7 +214,11 @@ export default function HistoryView() {
                 numSelected={selected.length}
                 onSort={table.onSort}
                 onSelectAllRows={(checked) =>
-                  setSelected(checked ? conversations.map((row) => row.id.toString()) : [])
+                  setSelected(
+                    checked
+                      ? conversations.map((row) => row.id.toString())
+                      : []
+                  )
                 }
               />
 
@@ -242,13 +257,15 @@ export default function HistoryView() {
                             onChange={(e) => {
                               const newSelected = e.target.checked
                                 ? [...selected, row.id.toString()]
-                                : selected.filter((id) => id !== row.id.toString());
+                                : selected.filter(
+                                    (id) => id !== row.id.toString()
+                                  );
                               setSelected(newSelected);
                               e.stopPropagation();
                             }}
                           />
                         </TableCell>
-                        
+
                         <TableCell>
                           <Typography variant="subtitle2">
                             {generateTitle(row)}
@@ -291,8 +308,10 @@ export default function HistoryView() {
           count={conversations.length}
           page={page}
           rowsPerPage={rowsPerPage}
-          onPageChange={(e, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(event) =>
+            setRowsPerPage(Number(event.target.value))
+          }
         />
       </Card>
     </Container>
