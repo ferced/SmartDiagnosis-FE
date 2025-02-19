@@ -98,8 +98,8 @@ export default function PatientForm() {
       )}
       {responseReceived &&
         responseDetails &&
-        responseDetails.common_diagnoses &&
-        responseDetails.common_diagnoses.length > 0 ? (
+        responseDetails.diagnoses.common_diagnoses &&
+        responseDetails.diagnoses.common_diagnoses.length > 0 ? (
         <>
           <ResponseDetails
             responseDetails={responseDetails}
@@ -118,7 +118,7 @@ export default function PatientForm() {
             question={question}
             setQuestion={setQuestion}
             originalPatientInfo={originalPatientInfo}
-            initialResponse={responseDetails.common_diagnoses[activeStep]}
+            initialResponse={responseDetails.diagnoses.common_diagnoses[activeStep]}
           />
         </>
       ) : (

@@ -107,6 +107,10 @@ export const paths = {
     calendar: `${ROOTS.DASHBOARD}/calendar`,
     permission: `${ROOTS.DASHBOARD}/permission`,
     fileManager: `${ROOTS.DASHBOARD}/file-manager`,
+    history: {
+    root: `${ROOTS.DASHBOARD}/history`,
+    conversation:  (id: number) => `${ROOTS.DASHBOARD}/history/conversation/${id}`,
+    },
     general: {
       app: `${ROOTS.DASHBOARD}/app`,
       ecommerce: `${ROOTS.DASHBOARD}/ecommerce`,

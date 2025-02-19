@@ -6,12 +6,14 @@ export interface DiagnosisDetail {
 }
 
 export interface DiagnosisResponseDetails {
-  disclaimer: string;
-  common_diagnoses: DiagnosisDetail[];
-  rare_diagnoses: DiagnosisDetail[] | null;  // Changed from optional to required but nullable
-  follow_up_questions: string[];
+  conversationId: number;
+  diagnoses: {
+    disclaimer: string;
+    common_diagnoses: DiagnosisDetail[];
+    rare_diagnoses: DiagnosisDetail[] | null;
+    follow_up_questions: string[];
+  };
 }
-
 export interface ResponseDetailsProps {
   responseDetails: DiagnosisResponseDetails;
   activeStep: number;
@@ -25,3 +27,5 @@ export interface ResponseDetailsProps {
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
 }
+
+

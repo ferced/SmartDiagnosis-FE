@@ -62,6 +62,13 @@ const PermissionDeniedPage = lazy(() => import('src/pages/dashboard/permission')
 // BLANK PAGE
 const BlankPage = lazy(() => import('src/pages/dashboard/blank'));
 
+// HISTORY PAGE
+const HistoryPage = lazy(() => import('src/pages/dashboard/history'));
+
+// CONVERSATION PAGE
+const ConversationPage = lazy(() => import('src/pages/dashboard/conversation'));
+
+
 // ----------------------------------------------------------------------
 
 export const dashboardRoutes = [
@@ -156,6 +163,12 @@ export const dashboardRoutes = [
       { path: 'file-manager', element: <FileManagerPage /> },
       { path: 'mail', element: <MailPage /> },
       { path: 'chat', element: <ChatPage /> },
+
+      {path: 'history', 
+        children: [
+          { element: <HistoryPage />, index: true },
+      { path: 'conversation/:id', element: <ConversationPage /> },
+        ]},
       { path: 'calendar', element: <CalendarPage /> },
       { path: 'kanban', element: <KanbanPage /> },
       { path: 'permission', element: <PermissionDeniedPage /> },
