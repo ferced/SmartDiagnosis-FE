@@ -108,48 +108,6 @@ export function useNavData() {
           //   ],
           // },
 
-          // // PRODUCT
-          // {
-          //   title: t('product'),
-          //   path: paths.dashboard.product.root,
-          //   icon: ICONS.product,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.product.root },
-          //     {
-          //       title: t('details'),
-          //       path: paths.dashboard.product.demo.details,
-          //     },
-          //     { title: t('create'), path: paths.dashboard.product.new },
-          //     { title: t('edit'), path: paths.dashboard.product.demo.edit },
-          //   ],
-          // },
-
-          // // ORDER
-          // {
-          //   title: t('order'),
-          //   path: paths.dashboard.order.root,
-          //   icon: ICONS.order,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.order.root },
-          //     { title: t('details'), path: paths.dashboard.order.demo.details },
-          //   ],
-          // },
-
-          // // INVOICE
-          // {
-          //   title: t('invoice'),
-          //   path: paths.dashboard.invoice.root,
-          //   icon: ICONS.invoice,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.invoice.root },
-          //     {
-          //       title: t('details'),
-          //       path: paths.dashboard.invoice.demo.details,
-          //     },
-          //     { title: t('create'), path: paths.dashboard.invoice.new },
-          //     { title: t('edit'), path: paths.dashboard.invoice.demo.edit },
-          //   ],
-          // },
 
           // // BLOG
           // {
@@ -164,32 +122,7 @@ export function useNavData() {
           //   ],
           // },
 
-          // // JOB
-          // {
-          //   title: t('job'),
-          //   path: paths.dashboard.job.root,
-          //   icon: ICONS.job,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.job.root },
-          //     { title: t('details'), path: paths.dashboard.job.demo.details },
-          //     { title: t('create'), path: paths.dashboard.job.new },
-          //     { title: t('edit'), path: paths.dashboard.job.demo.edit },
-          //   ],
-          // },
-
-          // // TOUR
-          // {
-          //   title: t('tour'),
-          //   path: paths.dashboard.tour.root,
-          //   icon: ICONS.tour,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.tour.root },
-          //     { title: t('details'), path: paths.dashboard.tour.demo.details },
-          //     { title: t('create'), path: paths.dashboard.tour.new },
-          //     { title: t('edit'), path: paths.dashboard.tour.demo.edit },
-          //   ],
-          // },
-
+          
           // FILE MANAGER
           {
             title: t('file_manager'),
@@ -197,13 +130,6 @@ export function useNavData() {
             icon: ICONS.folder,
           },
 
-          // // MAIL
-          // {
-          //   title: t('mail'),
-          //   path: paths.dashboard.mail,
-          //   icon: ICONS.mail,
-          //   info: <Label color="error">+32</Label>,
-          // },
 
           // CHAT
           {
@@ -212,35 +138,13 @@ export function useNavData() {
             icon: ICONS.chat,
           },
 
-          // // PRODUCT
-          // {
-          //   title: t('product'),
-          //   path: paths.dashboard.product.new,
-          //   icon: ICONS.product,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.product.root },
-          //     {
-          //       title: t('details'),
-          //       path: paths.dashboard.product.demo.details,
-          //     },
-          //     { title: t('create'), path: paths.dashboard.product.new },
-          //     { title: t('edit'), path: paths.dashboard.product.demo.edit },
-          //   ],
-          // },
+           // HISTORY
+           {
+            title: t('history'),
+            path: paths.dashboard.history.root,
+            icon: ICONS.blog,
+          },
 
-          //   // CALENDAR
-          //   {
-          //     title: t('calendar'),
-          //     path: paths.dashboard.calendar,
-          //     icon: ICONS.calendar,
-          //   },
-
-          //   // KANBAN
-          //   {
-          //     title: t('kanban'),
-          //     path: paths.dashboard.kanban,
-          //     icon: ICONS.kanban,
-          //   },
         ],
       },
 

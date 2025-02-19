@@ -123,7 +123,7 @@ const handleFollowUpSubmit = async () => {
 
     try {
       // Update conversation history
-      const newConversationEntries = responseDetails.follow_up_questions.map((question, index) => ({
+      const newConversationEntries = responseDetails.diagnoses.follow_up_questions.map((question, index) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
@@ -151,9 +151,9 @@ const handleFollowUpSubmit = async () => {
           currentMedications: originalPatientInfo.currentMedications || ''
         },
         initialResponse: {
-          disclaimer: responseDetails.disclaimer,
-          diagnoses: responseDetails.common_diagnoses,
-          follow_up_questions: responseDetails.follow_up_questions
+          disclaimer: responseDetails.diagnoses.disclaimer,
+          diagnoses: responseDetails.diagnoses.common_diagnoses,
+          follow_up_questions: responseDetails.diagnoses.follow_up_questions
         },
         followUpAnswers,  // Respuestas normales
         additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
@@ -170,7 +170,7 @@ const handleFollowUpSubmit = async () => {
       });
 
       // Check if the response has the expected structure
-      if (!response.data || !response.data.common_diagnoses) {
+      if (!response.data || !response.data.diagnoses.common_diagnoses) {
         throw new Error('Invalid response format from server');
       }
 
@@ -181,7 +181,7 @@ const handleFollowUpSubmit = async () => {
       setShowFollowUp(false);
       setActiveStep(0);
 
-      if (response.data.common_diagnoses.length === 1) {
+      if (response.data.diagnoses.common_diagnoses.length === 1) {
         // Optionally display a message or handle the final diagnosis
       }
     } catch (err) {
@@ -202,7 +202,7 @@ const handleFollowUpSubmit = async () => {
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={responseDetails.common_diagnoses.map((_, idx) => ({
+        steps={responseDetails.diagnoses.common_diagnoses.map((_, idx) => ({
           title: `Diagnosis ${idx + 1}`,
         }))}
         activeStep={activeStep}
@@ -217,7 +217,7 @@ const handleFollowUpSubmit = async () => {
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {responseDetails.common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
+        {responseDetails.diagnoses.common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
           <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
@@ -271,7 +271,7 @@ const handleFollowUpSubmit = async () => {
             </Card>
           </Collapse>
         ))}
-        {responseDetails.common_diagnoses.length === 1 && (
+        {responseDetails.diagnoses.common_diagnoses.length === 1 && (
           <Alert severity="info" sx={{ mt: 2 }}>
             Only one diagnosis remains after the follow-up. This is the most probable diagnosis
             based on the provided information.
@@ -281,7 +281,7 @@ const handleFollowUpSubmit = async () => {
   <FollowUpModal
     isOpen={showFollowUp}
     onClose={() => setShowFollowUp(false)}
-    followUpQuestions={responseDetails.follow_up_questions}
+    followUpQuestions={responseDetails.diagnoses.follow_up_questions}
     followUpAnswers={followUpAnswers}
     setFollowUpAnswers={setFollowUpAnswers}
     handleSubmit={handleFollowUpSubmit}
@@ -302,7 +302,7 @@ const handleFollowUpSubmit = async () => {
         >
           Previous
         </Button>
-        {responseDetails.common_diagnoses.length > 1 && (
+        {responseDetails.diagnoses.common_diagnoses.length > 1 && (
           <Button
             variant="contained"
             color="primary"
@@ -315,15 +315,15 @@ const handleFollowUpSubmit = async () => {
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === responseDetails.common_diagnoses.length - 1}
+          disabled={activeStep === responseDetails.diagnoses.common_diagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, responseDetails.common_diagnoses.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, responseDetails.diagnoses.common_diagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >
           Next
         </Button>
-        {responseDetails.rare_diagnoses && Array.isArray(responseDetails.rare_diagnoses) && responseDetails.rare_diagnoses.length > 0 && (
+        {responseDetails.diagnoses.rare_diagnoses && Array.isArray(responseDetails.diagnoses.rare_diagnoses) && responseDetails.diagnoses.rare_diagnoses.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
               <IconButton
@@ -345,7 +345,7 @@ const handleFollowUpSubmit = async () => {
                 }}
               >
                 <Badge
-                  badgeContent={responseDetails.rare_diagnoses.length}
+                  badgeContent={responseDetails.diagnoses.rare_diagnoses.length}
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
@@ -401,7 +401,7 @@ const handleFollowUpSubmit = async () => {
                     These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
                   </Alert>
 
-                  {responseDetails.rare_diagnoses.map((rareDiagnosis, index) => (
+                  {responseDetails.diagnoses.rare_diagnoses.map((rareDiagnosis, index) => (
                     <RareDiseaseCard key={index} details={rareDiagnosis} />
                   ))}
                 </Stack>

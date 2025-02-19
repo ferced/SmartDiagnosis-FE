@@ -59,7 +59,7 @@ export default function ChatBox({
         },
       });
 
-      const newResponse = rawResponse.data.response;
+      const newResponse = rawResponse.data.followUpResponse.response;
       setConversationHistory([...conversationHistory, { question, response: newResponse }]);
       setAskInputShown(false);
       setQuestion('');
