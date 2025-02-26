@@ -1,3 +1,4 @@
+// ResponseDetails.tsx
 import axios from 'axios';
 import { useState } from 'react';
 import Stepper from 'react-stepper-horizontal';
@@ -33,17 +34,16 @@ import { HOST_API } from 'src/config-global';
 
 import { DiagnosisDetail, ResponseDetailsProps } from './types';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
-
+import ClinicalStudiesModal from '../../../components/modals/ClinicalStudiesModal';
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
   const cardTheme = useTheme(); 
-
   return (
     <Card
       sx={{
         mb: 2,
         bgcolor: 'background.neutral',
-        borderLeft: `6px solid ${cardTheme.palette.warning.main}`, // Remove the theme parameter
+        borderLeft: `6px solid ${cardTheme.palette.warning.main}`,
       }}
     >
       <CardContent>
@@ -54,7 +54,6 @@ function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
               {details.diagnosis}
             </Typography>
           </Box>
-
           {details.prevalence && (
             <Box
               sx={{
@@ -73,7 +72,6 @@ function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
               </Typography>
             </Box>
           )}
-
           <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               Probability: {details.probability}
@@ -108,37 +106,38 @@ export default function ResponseDetails({
   >([]);
   const [showRareDiseases, setShowRareDiseases] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
+  const [openPdfModal, setOpenPdfModal] = useState(false);
 
-const handleFollowUpSubmit = async () => {
+  // El botón para cargar PDF se habilitará solo si todas las follow up questions se han completado
+  const areFollowUpComplete = responseDetails.diagnoses.follow_up_questions
+    ? responseDetails.diagnoses.follow_up_questions.every(
+        (question: string, index: number) =>
+          followUpAnswers[index] && followUpAnswers[index].trim() !== ''
+      )
+    : true;
+
+  const handleFollowUpSubmit = async () => {
     setIsLoading(true);
-
     const token = sessionStorage.getItem('accessToken');
-
     if (!token) {
       console.error('No access token found in sessionStorage');
       setError('No access token found in sessionStorage');
       setIsLoading(false);
       return;
     }
-
     try {
-      // Update conversation history
       const newConversationEntries = responseDetails.diagnoses.follow_up_questions.map((question, index) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
-
-      // Agregar la entrada de "Add more information" si se ingresó algo
       if (additionalInfo.trim() !== '') {
         newConversationEntries.push({
           question: 'Additional Information',
           answer: additionalInfo.trim(),
         });
       }
-
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
-
       const followUpRequest = {
         originalPatientInfo: {
           ...originalPatientInfo,
@@ -155,8 +154,8 @@ const handleFollowUpSubmit = async () => {
           diagnoses: responseDetails.diagnoses.common_diagnoses,
           follow_up_questions: responseDetails.diagnoses.follow_up_questions
         },
-        followUpAnswers,  // Respuestas normales
-        additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
+        followUpAnswers,
+        additionalInfo: additionalInfo.trim(),
         conversationHistory: updatedConversationHistory.map(entry => ({
           question: entry.question,
           response: entry.answer
@@ -169,31 +168,27 @@ const handleFollowUpSubmit = async () => {
         },
       });
 
-      // Check if the response has the expected structure
       if (!response.data || !response.data.diagnoses.common_diagnoses) {
         throw new Error('Invalid response format from server');
       }
 
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
-      setAdditionalInfo('');  // Resetear el campo adicional después de enviar
+      setAdditionalInfo('');
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
-
-      if (response.data.diagnoses.common_diagnoses.length === 1) {
-        // Optionally display a message or handle the final diagnosis
-      }
     } catch (err) {
       console.error('Error in handleFollowUpSubmit:', err);
       console.error('Error response:', err.response?.data);
       setError(
-        typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
+        typeof err.response?.data === 'object'
+          ? JSON.stringify(err.response.data)
+          : err.message
       );
       setIsLoading(false);
     }
   };
-
 
   const handleCloseSnackbar = () => {
     setError(null);
@@ -257,9 +252,7 @@ const handleFollowUpSubmit = async () => {
                 <Typography paragraph sx={{ ml: 4 }}>
                   {details.probability}
                 </Typography>
-
                 <Divider sx={{ my: 2 }} />
-
                 <Box display="flex" alignItems="center" my={2}>
                   <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
                   <Typography variant="h6">Treatment</Typography>
@@ -273,22 +266,20 @@ const handleFollowUpSubmit = async () => {
         ))}
         {responseDetails.diagnoses.common_diagnoses.length === 1 && (
           <Alert severity="info" sx={{ mt: 2 }}>
-            Only one diagnosis remains after the follow-up. This is the most probable diagnosis
-            based on the provided information.
+            Only one diagnosis remains after the follow-up. This is the most probable diagnosis based on the provided information.
           </Alert>
         )}
         {showFollowUp && (
-  <FollowUpModal
-    isOpen={showFollowUp}
-    onClose={() => setShowFollowUp(false)}
-    followUpQuestions={responseDetails.diagnoses.follow_up_questions}
-    followUpAnswers={followUpAnswers}
-    setFollowUpAnswers={setFollowUpAnswers}
-    handleSubmit={handleFollowUpSubmit}
-    isLoading={isLoading}
-  />
-)}
-
+          <FollowUpModal
+            isOpen={showFollowUp}
+            onClose={() => setShowFollowUp(false)}
+            followUpQuestions={responseDetails.diagnoses.follow_up_questions}
+            followUpAnswers={followUpAnswers}
+            setFollowUpAnswers={setFollowUpAnswers}
+            handleSubmit={handleFollowUpSubmit}
+            isLoading={isLoading}
+          />
+        )}
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
         <Button
@@ -323,7 +314,20 @@ const handleFollowUpSubmit = async () => {
         >
           Next
         </Button>
-        {responseDetails.diagnoses.rare_diagnoses && Array.isArray(responseDetails.diagnoses.rare_diagnoses) && responseDetails.diagnoses.rare_diagnoses.length > 0 && (
+      </Box>
+      <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          disabled={!areFollowUpComplete}
+          onClick={() => setOpenPdfModal(true)}
+        >
+          Upload PDF
+        </Button>
+      </Box>
+      {responseDetails.diagnoses.rare_diagnoses &&
+        Array.isArray(responseDetails.diagnoses.rare_diagnoses) &&
+        responseDetails.diagnoses.rare_diagnoses.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
               <IconButton
@@ -382,13 +386,9 @@ const handleFollowUpSubmit = async () => {
               >
                 <Stack spacing={3}>
                   <Box display="flex" alignItems="center" gap={2}>
-                    <Science
-                      color="warning"
-                      sx={{ fontSize: 28 }}
-                    />
+                    <Science color="warning" sx={{ fontSize: 28 }} />
                     <Typography variant="h5">Rare Disease Considerations</Typography>
                   </Box>
-
                   <Alert
                     severity="info"
                     sx={{
@@ -400,7 +400,6 @@ const handleFollowUpSubmit = async () => {
                   >
                     These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
                   </Alert>
-
                   {responseDetails.diagnoses.rare_diagnoses.map((rareDiagnosis, index) => (
                     <RareDiseaseCard key={index} details={rareDiagnosis} />
                   ))}
@@ -409,12 +408,16 @@ const handleFollowUpSubmit = async () => {
             </Slide>
           </>
         )}
-      </Box>
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
       </Snackbar>
+      <ClinicalStudiesModal
+        isOpen={openPdfModal}
+        onClose={() => setOpenPdfModal(false)}
+        uploadEndpoint={`${HOST_API}/upload-pdf`}
+      />
     </Box>
   );
 }
