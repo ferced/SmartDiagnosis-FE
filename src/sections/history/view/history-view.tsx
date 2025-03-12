@@ -308,6 +308,7 @@ export default function HistoryView() {
           count={conversations.length}
           page={page}
           rowsPerPage={rowsPerPage}
+          
           onPageChange={(event, newPage) => setPage(newPage)}
           onRowsPerPageChange={(event) =>
             setRowsPerPage(Number(event.target.value))

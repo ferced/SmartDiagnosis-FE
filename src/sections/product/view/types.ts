@@ -5,15 +5,19 @@ export interface DiagnosisDetail {
   prevalence?: string;
 }
 
+export interface DiagnosisData {
+  disclaimer: string;
+  common_diagnoses: DiagnosisDetail[];
+  rare_diagnoses: DiagnosisDetail[] | null;
+  follow_up_questions: string[];
+}
+
 export interface DiagnosisResponseDetails {
   conversationId: number;
-  diagnoses: {
-    disclaimer: string;
-    common_diagnoses: DiagnosisDetail[];
-    rare_diagnoses: DiagnosisDetail[] | null;
-    follow_up_questions: string[];
-  };
+  diagnoses?: DiagnosisData;
+  followUpResponse?: DiagnosisData;
 }
+
 export interface ResponseDetailsProps {
   responseDetails: DiagnosisResponseDetails;
   activeStep: number;
@@ -27,5 +31,3 @@ export interface ResponseDetailsProps {
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
 }
-
-

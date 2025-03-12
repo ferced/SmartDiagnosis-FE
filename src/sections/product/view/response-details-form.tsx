@@ -43,7 +43,7 @@ function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
       sx={{
         mb: 2,
         bgcolor: 'background.neutral',
-        borderLeft: `6px solid ${cardTheme.palette.warning.main}`, // Remove the theme parameter
+        borderLeft: `6px solid ${cardTheme.palette.warning.main}`,
       }}
     >
       <CardContent>
@@ -109,7 +109,15 @@ export default function ResponseDetails({
   const [showRareDiseases, setShowRareDiseases] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
 
-const handleFollowUpSubmit = async () => {
+  // Check if responseDetails has the right structure and handle the case if it doesn't
+  // Using type assertion to work around TypeScript error
+  const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+  const common_diagnoses = diagnoses.common_diagnoses || [];
+  const rare_diagnoses = diagnoses.rare_diagnoses || null;
+  const follow_up_questions = diagnoses.follow_up_questions || [];
+  const disclaimer = diagnoses.disclaimer || '';
+
+  const handleFollowUpSubmit = async () => {
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
@@ -123,7 +131,7 @@ const handleFollowUpSubmit = async () => {
 
     try {
       // Update conversation history
-      const newConversationEntries = responseDetails.diagnoses.follow_up_questions.map((question, index) => ({
+      const newConversationEntries = follow_up_questions.map((question: string, index: number) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
@@ -151,9 +159,9 @@ const handleFollowUpSubmit = async () => {
           currentMedications: originalPatientInfo.currentMedications || ''
         },
         initialResponse: {
-          disclaimer: responseDetails.diagnoses.disclaimer,
-          diagnoses: responseDetails.diagnoses.common_diagnoses,
-          follow_up_questions: responseDetails.diagnoses.follow_up_questions
+          disclaimer,
+          diagnoses: common_diagnoses,
+          follow_up_questions
         },
         followUpAnswers,  // Respuestas normales
         additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
@@ -169,11 +177,14 @@ const handleFollowUpSubmit = async () => {
         },
       });
 
-      // Check if the response has the expected structure
-      if (!response.data || !response.data.diagnoses.common_diagnoses) {
-        throw new Error('Invalid response format from server');
-      }
+      console.log('API Response:', response.data);
 
+      // Check if the response has the expected structure
+      if (!response.data) {
+        throw new Error('Empty response from server');
+      }
+      
+      // Handle both possible response formats
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
       setAdditionalInfo('');  // Resetear el campo adicional después de enviar
@@ -181,7 +192,7 @@ const handleFollowUpSubmit = async () => {
       setShowFollowUp(false);
       setActiveStep(0);
 
-      if (response.data.diagnoses.common_diagnoses.length === 1) {
+      if (response.data.followUpResponse.common_diagnoses.length === 1) {
         // Optionally display a message or handle the final diagnosis
       }
     } catch (err) {
@@ -202,7 +213,7 @@ const handleFollowUpSubmit = async () => {
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={responseDetails.diagnoses.common_diagnoses.map((_, idx) => ({
+        steps={common_diagnoses.map((_: any, idx: number) => ({
           title: `Diagnosis ${idx + 1}`,
         }))}
         activeStep={activeStep}
@@ -217,7 +228,7 @@ const handleFollowUpSubmit = async () => {
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {responseDetails.diagnoses.common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
+        {common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
           <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
@@ -271,24 +282,23 @@ const handleFollowUpSubmit = async () => {
             </Card>
           </Collapse>
         ))}
-        {responseDetails.diagnoses.common_diagnoses.length === 1 && (
+        {common_diagnoses.length === 1 && (
           <Alert severity="info" sx={{ mt: 2 }}>
             Only one diagnosis remains after the follow-up. This is the most probable diagnosis
             based on the provided information.
           </Alert>
         )}
         {showFollowUp && (
-  <FollowUpModal
-    isOpen={showFollowUp}
-    onClose={() => setShowFollowUp(false)}
-    followUpQuestions={responseDetails.diagnoses.follow_up_questions}
-    followUpAnswers={followUpAnswers}
-    setFollowUpAnswers={setFollowUpAnswers}
-    handleSubmit={handleFollowUpSubmit}
-    isLoading={isLoading}
-  />
-)}
-
+          <FollowUpModal
+            isOpen={showFollowUp}
+            onClose={() => setShowFollowUp(false)}
+            followUpQuestions={follow_up_questions}
+            followUpAnswers={followUpAnswers}
+            setFollowUpAnswers={setFollowUpAnswers}
+            handleSubmit={handleFollowUpSubmit}
+            isLoading={isLoading}
+          />
+        )}
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
         <Button
@@ -302,7 +312,7 @@ const handleFollowUpSubmit = async () => {
         >
           Previous
         </Button>
-        {responseDetails.diagnoses.common_diagnoses.length > 1 && (
+        {common_diagnoses.length > 1 && (
           <Button
             variant="contained"
             color="primary"
@@ -315,15 +325,15 @@ const handleFollowUpSubmit = async () => {
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === responseDetails.diagnoses.common_diagnoses.length - 1}
+          disabled={activeStep === common_diagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, responseDetails.diagnoses.common_diagnoses.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, common_diagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >
           Next
         </Button>
-        {responseDetails.diagnoses.rare_diagnoses && Array.isArray(responseDetails.diagnoses.rare_diagnoses) && responseDetails.diagnoses.rare_diagnoses.length > 0 && (
+        {rare_diagnoses && Array.isArray(rare_diagnoses) && rare_diagnoses.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
               <IconButton
@@ -345,7 +355,7 @@ const handleFollowUpSubmit = async () => {
                 }}
               >
                 <Badge
-                  badgeContent={responseDetails.diagnoses.rare_diagnoses.length}
+                  badgeContent={rare_diagnoses.length}
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
@@ -401,7 +411,7 @@ const handleFollowUpSubmit = async () => {
                     These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
                   </Alert>
 
-                  {responseDetails.diagnoses.rare_diagnoses.map((rareDiagnosis, index) => (
+                  {rare_diagnoses.map((rareDiagnosis, index) => (
                     <RareDiseaseCard key={index} details={rareDiagnosis} />
                   ))}
                 </Stack>

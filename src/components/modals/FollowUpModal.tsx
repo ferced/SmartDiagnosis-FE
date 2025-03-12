@@ -62,7 +62,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
       >
         Follow Up Questions
       </Typography>
-      {followUpQuestions.map((question, index) => (
+    {followUpQuestions?.map((question, index) => (
         <Box key={index} mb={3}>
           <Typography
             variant="h6"

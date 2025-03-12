@@ -73,6 +73,9 @@ export default function PatientForm() {
         },
       });
 
+      // Log the response structure to help debug
+      console.log('API Response:', response.data);
+      
       setResponseDetails(response.data);
       setActiveStep(0);
       setIsLoading(false);
@@ -91,15 +94,45 @@ export default function PatientForm() {
     setError(null);
   };
 
+  // Helper function to safely check for diagnoses
+  const hasDiagnoses = () => {
+    // Check for responseDetails.diagnoses structure
+    if (responseDetails?.diagnoses?.common_diagnoses && responseDetails.diagnoses.common_diagnoses.length > 0) {
+      return true;
+    }
+    
+    // Check for responseDetails.followUpResponse structure using type assertion
+    const response = responseDetails as any;
+    if (response?.followUpResponse?.common_diagnoses && response.followUpResponse.common_diagnoses.length > 0) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // Helper function to get the active diagnosis regardless of structure
+  const getActiveDiagnosis = () => {
+    if (responseDetails && responseDetails.diagnoses?.common_diagnoses && 
+        responseDetails.diagnoses.common_diagnoses.length > 0) {
+      return responseDetails.diagnoses.common_diagnoses[activeStep];
+    }
+    
+    // Using type assertion to handle followUpResponse
+    const response = responseDetails as any;
+    if (response && response.followUpResponse?.common_diagnoses && 
+        response.followUpResponse.common_diagnoses.length > 0) {
+      return response.followUpResponse.common_diagnoses[activeStep];
+    }
+    
+    return null;
+  };
+
   return (
     <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
       {!responseReceived && (
         <MainForm methods={methods} isLoading={isLoading} handleSubmit={handleSubmit(onSubmit)} />
       )}
-      {responseReceived &&
-        responseDetails &&
-        responseDetails.diagnoses.common_diagnoses &&
-        responseDetails.diagnoses.common_diagnoses.length > 0 ? (
+      {responseReceived && responseDetails && hasDiagnoses() ? (
         <>
           <ResponseDetails
             responseDetails={responseDetails}
@@ -118,7 +151,7 @@ export default function PatientForm() {
             question={question}
             setQuestion={setQuestion}
             originalPatientInfo={originalPatientInfo}
-            initialResponse={responseDetails.diagnoses.common_diagnoses[activeStep]}
+            initialResponse={getActiveDiagnosis()}
           />
         </>
       ) : (
