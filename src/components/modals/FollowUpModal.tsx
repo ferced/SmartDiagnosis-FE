@@ -9,7 +9,6 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-
 interface FollowUpModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +17,8 @@ interface FollowUpModalProps {
   setFollowUpAnswers: React.Dispatch<React.SetStateAction<string[]>>;
   handleSubmit: () => void;
   isLoading: boolean;
+  additionalInfo: string;
+  setAdditionalInfo: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const FollowUpModal: React.FC<FollowUpModalProps> = ({
@@ -28,6 +29,8 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
   setFollowUpAnswers,
   handleSubmit,
   isLoading,
+  additionalInfo,
+  setAdditionalInfo,
 }) => (
   <Modal
     open={isOpen}
@@ -62,7 +65,8 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
       >
         Follow Up Questions
       </Typography>
-    {followUpQuestions?.map((question, index) => (
+
+      {followUpQuestions?.map((question, index) => (
         <Box key={index} mb={3}>
           <Typography
             variant="h6"
@@ -88,6 +92,22 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
           />
         </Box>
       ))}
+
+      {/* Campo adicional para ingresar más información */}
+      <Box mt={3}>
+        <Typography variant="h6">Add more information</Typography>
+        <TextField
+          fullWidth
+          multiline
+          rows={3}
+          variant="outlined"
+          value={additionalInfo}
+          onChange={(e) => setAdditionalInfo(e.target.value)}
+          placeholder="Enter additional details here..."
+          sx={{ mt: 1 }}
+        />
+      </Box>
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
         <Button
           variant="outlined"
