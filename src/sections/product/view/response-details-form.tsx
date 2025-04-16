@@ -36,7 +36,7 @@ import FollowUpModal from '../../../components/modals/FollowUpModal';
 
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
-  const cardTheme = useTheme(); 
+  const cardTheme = useTheme();
 
   return (
     <Card
@@ -117,6 +117,10 @@ export default function ResponseDetails({
   const follow_up_questions = diagnoses.follow_up_questions || [];
   const disclaimer = diagnoses.disclaimer || '';
 
+  // Determine if we should show the Follow Up Questions button
+  // Hide it if only one diagnosis remains
+  const showFollowUpButton = common_diagnoses.length > 1 && follow_up_questions.length > 0;
+
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
 
@@ -147,6 +151,7 @@ export default function ResponseDetails({
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
 
+      // Asegurar que la estructura del request sea compatible con el backend
       const followUpRequest = {
         originalPatientInfo: {
           ...originalPatientInfo,
@@ -160,8 +165,10 @@ export default function ResponseDetails({
         },
         initialResponse: {
           disclaimer,
-          diagnoses: common_diagnoses,
-          follow_up_questions
+          // Asegurar que el nombre del campo sea el que espera el backend
+          // En el backend espera CommonDiagnoses, pero el frontend usa common_diagnoses
+          diagnoses: common_diagnoses, // Este es el campo que el backend convertirá a CommonDiagnoses
+          follow_up_questions // Este campo es esperado por el backend
         },
         followUpAnswers,  // Respuestas normales
         additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
@@ -170,6 +177,9 @@ export default function ResponseDetails({
           response: entry.answer
         }))
       };
+
+      // Debugging - Imprimir la estructura que se está enviando
+      console.log('Sending request structure:', JSON.stringify(followUpRequest, null, 2));
 
       const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
         headers: {
@@ -183,7 +193,7 @@ export default function ResponseDetails({
       if (!response.data) {
         throw new Error('Empty response from server');
       }
-      
+
       // Handle both possible response formats
       setResponseDetails(response.data);
       setFollowUpAnswers([]);
@@ -192,8 +202,11 @@ export default function ResponseDetails({
       setShowFollowUp(false);
       setActiveStep(0);
 
-      if (response.data.followUpResponse.common_diagnoses.length === 1) {
-        // Optionally display a message or handle the final diagnosis
+      // Verificar si hemos llegado a un diagnóstico final
+      const responseData = response.data.followUpResponse;
+      if (responseData && responseData.common_diagnoses && responseData.common_diagnoses.length === 1) {
+        console.log("Final diagnosis reached:", responseData.common_diagnoses[0]);
+        // La UI se actualizará automáticamente para mostrar el diagnóstico único
       }
     } catch (err) {
       console.error('Error in handleFollowUpSubmit:', err);
@@ -283,9 +296,9 @@ export default function ResponseDetails({
           </Collapse>
         ))}
         {common_diagnoses.length === 1 && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Only one diagnosis remains after the follow-up. This is the most probable diagnosis
-            based on the provided information.
+          <Alert severity="success" sx={{ mt: 2 }}>
+            Final diagnosis reached: The system has determined this is the most probable diagnosis
+            based on the provided information. No further follow-up questions needed.
           </Alert>
         )}
         {showFollowUp && (
@@ -312,7 +325,8 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
-        {common_diagnoses.length > 1 && (
+        {/* Only show Follow Up Questions button if multiple diagnoses remain and questions exist */}
+        {showFollowUpButton && (
           <Button
             variant="contained"
             color="primary"
