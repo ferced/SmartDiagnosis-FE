@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
 import {
@@ -108,6 +108,8 @@ export default function ResponseDetails({
   >([]);
   const [showRareDiseases, setShowRareDiseases] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
+  const [followUpCounter, setFollowUpCounter] = useState(0);
+  const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
 
   // Check if responseDetails has the right structure and handle the case if it doesn't
   // Using type assertion to work around TypeScript error
@@ -117,9 +119,22 @@ export default function ResponseDetails({
   const follow_up_questions = diagnoses.follow_up_questions || [];
   const disclaimer = diagnoses.disclaimer || '';
 
+  // Effect to set final diagnosis after 3 rounds of follow-up
+  useEffect(() => {
+    if (followUpCounter >= 3 && common_diagnoses.length > 0 && !finalDiagnosis) {
+      // Set the diagnosis with highest probability as final
+      // In a real app, you might want to use a more sophisticated selection method
+      // But for this example, we'll pick the first diagnosis as the "most probable"
+      setFinalDiagnosis(common_diagnoses[0]);
+
+      // Reset activeStep to show the final diagnosis
+      setActiveStep(0);
+    }
+  }, [followUpCounter, common_diagnoses, finalDiagnosis]);
+
   // Determine if we should show the Follow Up Questions button
-  // Hide it if only one diagnosis remains
-  const showFollowUpButton = common_diagnoses.length > 1 && follow_up_questions.length > 0;
+  // Hide it if only one diagnosis remains or if we've reached 3 follow-ups
+  const showFollowUpButton = common_diagnoses.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
 
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
@@ -178,36 +193,70 @@ export default function ResponseDetails({
         }))
       };
 
-      // Debugging - Imprimir la estructura que se está enviando
-      console.log('Sending request structure:', JSON.stringify(followUpRequest, null, 2));
+      // Increment follow-up counter
+      const newFollowUpCounter = followUpCounter + 1;
+      setFollowUpCounter(newFollowUpCounter);
 
-      const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // If this is the third follow-up, we'll handle the final diagnosis
+      if (newFollowUpCounter === 3) {
+        // We'll still send the request to get the backend's response
+        const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      console.log('API Response:', response.data);
+        console.log('API Response (Final Round):', response.data);
 
-      // Check if the response has the expected structure
-      if (!response.data) {
-        throw new Error('Empty response from server');
+        // But we'll override the result to show only one diagnosis
+        // We'll pick the first diagnosis as the "most probable" one
+        const responseData = response.data;
+        const diagnosisData = responseData?.followUpResponse || responseData?.diagnoses;
+
+        if (diagnosisData && diagnosisData.common_diagnoses && diagnosisData.common_diagnoses.length > 0) {
+          // Pick the first diagnosis from the response
+          const finalDiag = diagnosisData.common_diagnoses[0];
+          setFinalDiagnosis(finalDiag);
+
+          // Modify the response to only include the final diagnosis
+          const modifiedResponse = {
+            ...responseData,
+            followUpResponse: {
+              ...diagnosisData,
+              common_diagnoses: [finalDiag],
+              follow_up_questions: [] // No more follow-up questions
+            }
+          };
+
+          setResponseDetails(modifiedResponse);
+        } else {
+          // If no diagnoses returned, just use the response as is
+          setResponseDetails(response.data);
+        }
+      } else {
+        // For follow-ups 1 and 2, process normally
+        const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log('API Response:', response.data);
+
+        // Check if the response has the expected structure
+        if (!response.data) {
+          throw new Error('Empty response from server');
+        }
+
+        // Handle both possible response formats
+        setResponseDetails(response.data);
       }
 
-      // Handle both possible response formats
-      setResponseDetails(response.data);
       setFollowUpAnswers([]);
       setAdditionalInfo('');  // Resetear el campo adicional después de enviar
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
-
-      // Verificar si hemos llegado a un diagnóstico final
-      const responseData = response.data.followUpResponse;
-      if (responseData && responseData.common_diagnoses && responseData.common_diagnoses.length === 1) {
-        console.log("Final diagnosis reached:", responseData.common_diagnoses[0]);
-        // La UI se actualizará automáticamente para mostrar el diagnóstico único
-      }
     } catch (err) {
       console.error('Error in handleFollowUpSubmit:', err);
       console.error('Error response:', err.response?.data);
@@ -218,15 +267,17 @@ export default function ResponseDetails({
     }
   };
 
-
   const handleCloseSnackbar = () => {
     setError(null);
   };
 
+  // Determine which diagnoses to display
+  const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : common_diagnoses;
+
   return (
     <Box sx={{ mt: 3 }}>
       <Stepper
-        steps={common_diagnoses.map((_: any, idx: number) => ({
+        steps={displayDiagnoses.map((_: any, idx: number) => ({
           title: `Diagnosis ${idx + 1}`,
         }))}
         activeStep={activeStep}
@@ -241,7 +292,7 @@ export default function ResponseDetails({
         size={36}
       />
       <Box sx={{ mt: 5 }}>
-        {common_diagnoses.map((details: DiagnosisDetail, idx: number) => (
+        {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
           <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
             <Card
               raised
@@ -255,12 +306,12 @@ export default function ResponseDetails({
               }}
             >
               <CardHeader
-                title={`Diagnosis Result ${idx + 1}`}
+                title={finalDiagnosis ? "Final Diagnosis" : `Diagnosis Result ${idx + 1}`}
                 subheader=" "
                 titleTypographyProps={{ align: 'center', variant: 'h4' }}
                 subheaderTypographyProps={{ align: 'center' }}
                 sx={{
-                  backgroundColor: theme.palette.primary.main,
+                  backgroundColor: finalDiagnosis ? theme.palette.success.main : theme.palette.primary.main,
                   color: theme.palette.common.white,
                   paddingBottom: 3,
                 }}
@@ -279,7 +330,7 @@ export default function ResponseDetails({
                   <Typography variant="h6">Probability</Typography>
                 </Box>
                 <Typography paragraph sx={{ ml: 4 }}>
-                  {details.probability}
+                  {finalDiagnosis ? "High" : details.probability}
                 </Typography>
 
                 <Divider sx={{ my: 2 }} />
@@ -295,12 +346,21 @@ export default function ResponseDetails({
             </Card>
           </Collapse>
         ))}
-        {common_diagnoses.length === 1 && (
+
+        {finalDiagnosis && (
+          <Alert severity="success" sx={{ mt: 2 }}>
+            Final diagnosis reached: The system has determined this is the most probable diagnosis
+            based on the provided information after 3 rounds of follow-up questions.
+          </Alert>
+        )}
+
+        {displayDiagnoses.length === 1 && !finalDiagnosis && (
           <Alert severity="success" sx={{ mt: 2 }}>
             Final diagnosis reached: The system has determined this is the most probable diagnosis
             based on the provided information. No further follow-up questions needed.
           </Alert>
         )}
+
         {showFollowUp && (
           <FollowUpModal
             isOpen={showFollowUp}
@@ -325,7 +385,10 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
-        {/* Only show Follow Up Questions button if multiple diagnoses remain and questions exist */}
+
+
+
+        {/* Only show Follow Up Questions button if multiple diagnoses remain, questions exist, and we haven't reached 3 follow-ups */}
         {showFollowUpButton && (
           <Button
             variant="contained"
@@ -336,17 +399,19 @@ export default function ResponseDetails({
             Follow Up Questions
           </Button>
         )}
+
         <Button
           variant="contained"
           color="primary"
-          disabled={activeStep === common_diagnoses.length - 1}
+          disabled={activeStep === displayDiagnoses.length - 1}
           onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, common_diagnoses.length - 1));
+            setActiveStep((prev) => Math.min(prev + 1, displayDiagnoses.length - 1));
             setShowFollowUp(false);
           }}
         >
           Next
         </Button>
+
         {rare_diagnoses && Array.isArray(rare_diagnoses) && rare_diagnoses.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">

@@ -75,7 +75,7 @@ export default function PatientForm() {
 
       // Log the response structure to help debug
       console.log('API Response:', response.data);
-      
+
       setResponseDetails(response.data);
       setActiveStep(0);
       setIsLoading(false);
@@ -100,30 +100,30 @@ export default function PatientForm() {
     if (responseDetails?.diagnoses?.common_diagnoses && responseDetails.diagnoses.common_diagnoses.length > 0) {
       return true;
     }
-    
+
     // Check for responseDetails.followUpResponse structure using type assertion
     const response = responseDetails as any;
     if (response?.followUpResponse?.common_diagnoses && response.followUpResponse.common_diagnoses.length > 0) {
       return true;
     }
-    
+
     return false;
   };
-  
+
   // Helper function to get the active diagnosis regardless of structure
   const getActiveDiagnosis = () => {
-    if (responseDetails && responseDetails.diagnoses?.common_diagnoses && 
-        responseDetails.diagnoses.common_diagnoses.length > 0) {
+    if (responseDetails && responseDetails.diagnoses?.common_diagnoses &&
+      responseDetails.diagnoses.common_diagnoses.length > 0) {
       return responseDetails.diagnoses.common_diagnoses[activeStep];
     }
-    
+
     // Using type assertion to handle followUpResponse
     const response = responseDetails as any;
-    if (response && response.followUpResponse?.common_diagnoses && 
-        response.followUpResponse.common_diagnoses.length > 0) {
+    if (response && response.followUpResponse?.common_diagnoses &&
+      response.followUpResponse.common_diagnoses.length > 0) {
       return response.followUpResponse.common_diagnoses[activeStep];
     }
-    
+
     return null;
   };
 
