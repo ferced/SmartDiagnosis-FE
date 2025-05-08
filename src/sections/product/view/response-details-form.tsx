@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Stepper from 'react-stepper-horizontal';
 
 import {
@@ -33,7 +33,6 @@ import { HOST_API } from 'src/config-global';
 
 import { DiagnosisDetail, ResponseDetailsProps } from './types';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
-
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
   const cardTheme = useTheme();
@@ -112,40 +111,54 @@ export default function ResponseDetails({
   const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
   const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(null);
 
-  // Check if responseDetails has the right structure and handle the case if it doesn't
-  // Using type assertion to work around TypeScript error
-  const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
-  const common_diagnoses = diagnoses.common_diagnoses || [];
-  
+  // Using useMemo to extract data from responseDetails to avoid redeclaration issues
+  const {
+    diagnosesData,
+    disclaimer,
+    follow_up_questions
+  } = useMemo(() => {
+    // Check if responseDetails has the right structure and handle the case if it doesn't
+    // Using type assertion to work around TypeScript error
+    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+    return {
+      diagnosesData: diagnoses.common_diagnoses || [],
+      disclaimer: diagnoses.disclaimer || '',
+      follow_up_questions: diagnoses.follow_up_questions || [],
+    };
+  }, [responseDetails]);
+
   // Use preserved rare diagnoses if they exist, otherwise use the ones from the response
-  const rare_diagnoses = preservedRareDiagnoses || diagnoses.rare_diagnoses || null;
-  
+  const rareDiseasesData = useMemo(() => {
+    if (preservedRareDiagnoses) return preservedRareDiagnoses;
+
+    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+    return diagnoses.rare_diagnoses || null;
+  }, [preservedRareDiagnoses, responseDetails]);
+
   // Store rare diagnoses when they first appear
   useEffect(() => {
+    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     if (diagnoses.rare_diagnoses && diagnoses.rare_diagnoses.length > 0 && !preservedRareDiagnoses) {
       setPreservedRareDiagnoses(diagnoses.rare_diagnoses);
     }
-  }, [diagnoses.rare_diagnoses, preservedRareDiagnoses]);
-  
-  const follow_up_questions = diagnoses.follow_up_questions || [];
-  const disclaimer = diagnoses.disclaimer || '';
+  }, [responseDetails, preservedRareDiagnoses]);
 
   // Effect to set final diagnosis after 3 rounds of follow-up
   useEffect(() => {
-    if (followUpCounter >= 3 && common_diagnoses.length > 0 && !finalDiagnosis) {
+    if (followUpCounter >= 3 && diagnosesData.length > 0 && !finalDiagnosis) {
       // Set the diagnosis with highest probability as final
       // In a real app, you might want to use a more sophisticated selection method
       // But for this example, we'll pick the first diagnosis as the "most probable"
-      setFinalDiagnosis(common_diagnoses[0]);
-      
+      setFinalDiagnosis(diagnosesData[0]);
+
       // Reset activeStep to show the final diagnosis
       setActiveStep(0);
     }
-  }, [followUpCounter, common_diagnoses, finalDiagnosis, setActiveStep]);
+  }, [followUpCounter, diagnosesData, finalDiagnosis, setActiveStep]);
 
   // Determine if we should show the Follow Up Questions button
   // Hide it if only one diagnosis remains or if we've reached 3 follow-ups
-  const showFollowUpButton = common_diagnoses.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
+  const showFollowUpButton = diagnosesData.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
 
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
@@ -192,8 +205,7 @@ export default function ResponseDetails({
         initialResponse: {
           disclaimer,
           // Asegurar que el nombre del campo sea el que espera el backend
-          // En el backend espera CommonDiagnoses, pero el frontend usa common_diagnoses
-          diagnoses: common_diagnoses, // Este es el campo que el backend convertirá a CommonDiagnoses
+          diagnoses: diagnosesData, // Este es el campo que el backend convertirá a CommonDiagnoses
           follow_up_questions // Este campo es esperado por el backend
         },
         followUpAnswers,  // Respuestas normales
@@ -223,12 +235,12 @@ export default function ResponseDetails({
         // We'll pick the first diagnosis as the "most probable" one
         const responseData = response.data;
         const diagnosisData = responseData?.followUpResponse || responseData?.diagnoses;
-        
+
         if (diagnosisData && diagnosisData.common_diagnoses && diagnosisData.common_diagnoses.length > 0) {
           // Pick the first diagnosis from the response
           const finalDiag = diagnosisData.common_diagnoses[0];
           setFinalDiagnosis(finalDiag);
-          
+
           // Modify the response to only include the final diagnosis
           // but preserve rare diagnoses if they exist
           const modifiedResponse = {
@@ -240,7 +252,7 @@ export default function ResponseDetails({
               rare_diagnoses: preservedRareDiagnoses || diagnosisData.rare_diagnoses // Preserve rare diagnoses
             }
           };
-          
+
           setResponseDetails(modifiedResponse);
         } else {
           // If no diagnoses returned, just use the response as is
@@ -285,7 +297,7 @@ export default function ResponseDetails({
   };
 
   // Determine which diagnoses to display
-  const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : common_diagnoses;
+  const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : diagnosesData;
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -359,7 +371,7 @@ export default function ResponseDetails({
             </Card>
           </Collapse>
         ))}
-        
+
         {finalDiagnosis && (
           <Alert severity="success" sx={{ mt: 2 }}>
             Final diagnosis reached: The system has determined this is the most probable diagnosis
@@ -373,7 +385,7 @@ export default function ResponseDetails({
             based on the provided information. No further follow-up questions needed.
           </Alert>
         )}
-        
+
         {showFollowUp && (
           <FollowUpModal
             isOpen={showFollowUp}
@@ -398,14 +410,14 @@ export default function ResponseDetails({
         >
           Previous
         </Button>
-        
+
         {/* Show follow-up rounds counter */}
         {followUpCounter > 0 && !finalDiagnosis && (
           <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
             Follow-up rounds: {followUpCounter}/3
           </Typography>
         )}
-        
+
         {/* Only show Follow Up Questions button if multiple diagnoses remain, questions exist, and we haven't reached 3 follow-ups */}
         {showFollowUpButton && (
           <Button
@@ -417,7 +429,7 @@ export default function ResponseDetails({
             Follow Up Questions
           </Button>
         )}
-        
+
         <Button
           variant="contained"
           color="primary"
@@ -429,8 +441,8 @@ export default function ResponseDetails({
         >
           Next
         </Button>
-        
-        {(rare_diagnoses || preservedRareDiagnoses) && Array.isArray(rare_diagnoses || preservedRareDiagnoses) && (rare_diagnoses || preservedRareDiagnoses).length > 0 && (
+
+        {(rareDiseasesData) && Array.isArray(rareDiseasesData) && rareDiseasesData.length > 0 && (
           <>
             <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
               <IconButton
@@ -452,7 +464,7 @@ export default function ResponseDetails({
                 }}
               >
                 <Badge
-                  badgeContent={(rare_diagnoses || []).length}
+                  badgeContent={rareDiseasesData.length}
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
@@ -508,7 +520,7 @@ export default function ResponseDetails({
                     These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
                   </Alert>
 
-                  {(rare_diagnoses || []).map((rareDiagnosis, index) => (
+                  {rareDiseasesData.map((rareDiagnosis: DiagnosisDetail, index: number) => (
                     <RareDiseaseCard key={index} details={rareDiagnosis} />
                   ))}
                 </Stack>
