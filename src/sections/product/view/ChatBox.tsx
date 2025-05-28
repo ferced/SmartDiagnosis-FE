@@ -23,6 +23,7 @@ export default function ChatBox({
   const [askInputShown, setAskInputShown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  const [currentContext, setCurrentContext] = useState(initialResponse);
 
   const handleAskNowClick = () => {
     setAskInputShown((prev) => !prev);
@@ -43,15 +44,23 @@ export default function ChatBox({
         return;
       }
 
-      const newConversationHistory = [...conversationHistory, { question }];
-      const requestPayload = {
-        originalPatientInfo,
-        initialResponse,
-        followUpQuestion: question,
-        conversationHistory: newConversationHistory,
+      // Construir el contexto acumulado incluyendo el historial de conversación
+      const contextWithHistory = {
+        ...currentContext,
+        conversationHistory: conversationHistory.map(conv => ({
+          question: conv.question,
+          response: conv.response
+        }))
       };
 
-      console.log('requestPayload', requestPayload);
+      const requestPayload = {
+        originalPatientInfo,
+        initialResponse: contextWithHistory, // Enviar el contexto completo como initialResponse
+        followUpQuestion: question,
+        conversationHistory: [...conversationHistory, { question }],
+      };
+
+      console.log('requestPayload with full context', requestPayload);
 
       const rawResponse = await axios.post(`${HOST_API}/diagnosis/followup`, requestPayload, {
         headers: {
@@ -60,7 +69,21 @@ export default function ChatBox({
       });
 
       const newResponse = rawResponse.data.followUpResponse.response;
-      setConversationHistory([...conversationHistory, { question, response: newResponse }]);
+
+      // Actualizar el historial y el contexto
+      const updatedHistory = [...conversationHistory, { question, response: newResponse }];
+      setConversationHistory(updatedHistory);
+
+      // Actualizar el contexto para la próxima pregunta
+      setCurrentContext({
+        ...contextWithHistory,
+        lastFollowUpResponse: newResponse,
+        conversationHistory: updatedHistory.map(conv => ({
+          question: conv.question,
+          response: conv.response
+        }))
+      });
+
       setAskInputShown(false);
       setQuestion('');
     } catch (error) {

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { useState, useEffect, useMemo } from 'react';
 import Stepper from 'react-stepper-horizontal';
+import { useState, useMemo, useEffect } from 'react';
 
 import {
   Healing,
