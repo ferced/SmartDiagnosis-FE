@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Stepper from 'react-stepper-horizontal';
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import {
   Healing,
@@ -33,6 +33,11 @@ import { HOST_API } from 'src/config-global';
 
 import { DiagnosisDetail, ResponseDetailsProps } from './types';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
+
+interface OpenAIConfig {
+  apiKey: string;
+  model: string;
+}
 
 function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
   const cardTheme = useTheme();
@@ -99,7 +104,8 @@ export default function ResponseDetails({
   isLoading,
   setIsLoading,
   setResponseDetails,
-}: ResponseDetailsProps) {
+  openAIConfig,
+}: ResponseDetailsProps & { openAIConfig?: OpenAIConfig | null }) {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [conversationHistory, setConversationHistory] = useState<
@@ -200,7 +206,8 @@ export default function ResponseDetails({
           symptoms: originalPatientInfo.symptoms || '',
           medicalHistory: originalPatientInfo.medicalHistory || '',
           allergies: originalPatientInfo.allergies || '',
-          currentMedications: originalPatientInfo.currentMedications || ''
+          currentMedications: originalPatientInfo.currentMedications || '',
+          ...(openAIConfig && { openaiConfig: openAIConfig }),
         },
         initialResponse: {
           disclaimer,
@@ -213,7 +220,8 @@ export default function ResponseDetails({
         conversationHistory: updatedConversationHistory.map(entry => ({
           question: entry.question,
           response: entry.answer
-        }))
+        })),
+        ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
       // Increment follow-up counter

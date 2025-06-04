@@ -7,18 +7,25 @@ import { Box, List, Button, Collapse, ListItem, TextField, Typography, ListItemT
 
 import { HOST_API } from 'src/config-global';
 
+interface OpenAIConfig {
+  apiKey: string;
+  model: string;
+}
+
 interface ChatBoxProps {
   question: string;
   setQuestion: (value: SetStateAction<string>) => void;
   originalPatientInfo: any;
   initialResponse: any;
+  openAIConfig?: OpenAIConfig | null;
 }
 
 export default function ChatBox({
   question,
   setQuestion,
   originalPatientInfo,
-  initialResponse
+  initialResponse,
+  openAIConfig
 }: ChatBoxProps) {
   const [askInputShown, setAskInputShown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +61,14 @@ export default function ChatBox({
       };
 
       const requestPayload = {
-        originalPatientInfo,
+        originalPatientInfo: {
+          ...originalPatientInfo,
+          ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config
+        },
         initialResponse: contextWithHistory, // Enviar el contexto completo como initialResponse
         followUpQuestion: question,
         conversationHistory: [...conversationHistory, { question }],
+        ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config at root level too
       };
 
       console.log('requestPayload with full context', requestPayload);
@@ -74,21 +85,17 @@ export default function ChatBox({
       const updatedHistory = [...conversationHistory, { question, response: newResponse }];
       setConversationHistory(updatedHistory);
 
-      // Actualizar el contexto para la próxima pregunta
+      // Actualizar el contexto actual para futuras preguntas
       setCurrentContext({
         ...contextWithHistory,
-        lastFollowUpResponse: newResponse,
-        conversationHistory: updatedHistory.map(conv => ({
-          question: conv.question,
-          response: conv.response
-        }))
+        conversationHistory: updatedHistory
       });
 
-      setAskInputShown(false);
+      // Limpiar la pregunta
       setQuestion('');
+      setIsLoading(false);
     } catch (error) {
-      console.error(error.response ? error.response.data : error.message);
-    } finally {
+      console.error('Error submitting question:', error);
       setIsLoading(false);
     }
   };
@@ -96,40 +103,49 @@ export default function ChatBox({
   return (
     <Box
       sx={{
-        mt: 4,
-        py: 3,
-        px: 2,
-        bgcolor: 'background.paper',
-        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-        borderRadius: '8px',
-        textAlign: 'center',
+        mt: 5,
+        p: 3,
+        border: '1px solid #e0e0e0',
+        borderRadius: 2,
+        backgroundColor: '#fafafa',
       }}
     >
-      <Typography
-        variant="h5"
-        sx={{ mb: 2, fontWeight: 'medium', color: 'text.primary' }}
-      >
-        Got More Questions?
+      <Typography variant="h6" gutterBottom>
+        Ask a Follow-up Question
       </Typography>
-      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-        If you have any more questions or need further clarification, don&apos;t hesitate to ask.
-      </Typography>
-      <List>
-        {conversationHistory.map((entry, index) => (
-          <ListItem key={index} alignItems="flex-start">
-            <ListItemText
-              primary={<Typography variant="body1" color="text.primary"><strong>Q:</strong> {entry.question}</Typography>}
-              secondary={
-                entry.response && (
-                  <Typography variant="body1" color="text.secondary" component="div">
-                    <strong>A:</strong> <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.response) }} />
-                  </Typography>
-                )
-              }
-            />
-          </ListItem>
-        ))}
-      </List>
+
+      {conversationHistory.length > 0 && (
+        <Box sx={{ mb: 3, maxHeight: 300, overflow: 'auto' }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Conversation History:
+          </Typography>
+          <List dense>
+            {conversationHistory.map((conv, index) => (
+              <div key={index}>
+                <ListItem sx={{ py: 0.5, bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
+                  <ListItemText
+                    primary={`Q: ${conv.question}`}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.5, bgcolor: 'primary.lighter', mb: 2, borderRadius: 1 }}>
+                  <ListItemText
+                    primary={
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(conv.response.replace(/\n/g, '<br>')),
+                        }}
+                      />
+                    }
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+              </div>
+            ))}
+          </List>
+        </Box>
+      )}
+
       <Collapse in={!askInputShown}>
         <Button
           variant="contained"

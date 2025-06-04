@@ -1,16 +1,45 @@
-import { Controller, UseFormReturn } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 
-import { Card, Grid, Stack, Button, Select, MenuItem, CardHeader, InputLabel, FormControl, CircularProgress } from '@mui/material';
+import { Settings, AutoAwesome } from '@mui/icons-material';
+import {
+  Box,
+  Card,
+  Chip,
+  Grid,
+  Alert,
+  Stack,
+  Button,
+  Select,
+  MenuItem,
+  CardHeader,
+  InputLabel,
+  Typography,
+  FormControl,
+  CircularProgress,
+} from '@mui/material';
 
 import { RHFUpload, RHFTextField } from 'src/components/hook-form';
 
-interface MainFormProps {
-  methods: UseFormReturn<any>;
-  isLoading: boolean;
-  handleSubmit: () => void;
+interface OpenAIConfig {
+  apiKey: string;
+  model: string;
 }
 
-export default function MainForm({ methods, isLoading, handleSubmit }: MainFormProps) {
+interface MainFormProps {
+  methods: any;
+  isLoading: boolean;
+  handleSubmit: () => void;
+  openAIConfig: OpenAIConfig | null;
+  onOpenAIConfigClick: () => void;
+}
+
+export default function MainForm({
+  methods,
+  isLoading,
+  handleSubmit,
+  openAIConfig,
+  onOpenAIConfigClick
+}: MainFormProps) {
   const { setValue } = methods;
 
   const handleAutoFill = () => {
@@ -79,8 +108,56 @@ export default function MainForm({ methods, isLoading, handleSubmit }: MainFormP
             </Stack>
           </Card>
         </Grid>
+
+        {/* OpenAI Configuration Card */}
+        <Grid xs={12}>
+          <Card>
+            <CardHeader
+              title="AI Model Configuration"
+              action={
+                <Button
+                  variant="outlined"
+                  startIcon={<Settings />}
+                  onClick={onOpenAIConfigClick}
+                  size="small"
+                >
+                  Configure
+                </Button>
+              }
+            />
+            <Box sx={{ p: 3 }}>
+              {openAIConfig ? (
+                <Stack spacing={2}>
+                  <Alert severity="success" icon={<AutoAwesome />}>
+                    Using your custom OpenAI configuration
+                  </Alert>
+                  <Box display="flex" gap={2} alignItems="center">
+                    <Typography variant="body2" color="text.secondary">
+                      Model:
+                    </Typography>
+                    <Chip
+                      label={openAIConfig.model}
+                      color="primary"
+                      size="small"
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    API Key: ••••••••{openAIConfig.apiKey.slice(-4)}
+                  </Typography>
+                </Stack>
+              ) : (
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    Using system default (GPT-4o). Configure your own API key to choose different models and manage your own costs.
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+          </Card>
+        </Grid>
       </Grid>
-      <Stack direction="row" justifyContent="center" spacing={2} sx={{ mt: 3 }}>
+
+      <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
         <Button
           type="submit"
           variant="contained"
