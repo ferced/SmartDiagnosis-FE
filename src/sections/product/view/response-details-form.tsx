@@ -260,11 +260,11 @@ export default function ResponseDetails({
     // If we're switching to rare disease without test
     if (!testName && !testResult) {
       // Find the rare disease and set it as primary
-      const rareDisease = rareDiseasesData?.find(d => d.diagnosis === rareDiseaseId);
+      const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
       if (rareDisease) {
         // Archive current diagnoses before switching
         const currentTimestamp = Math.floor(Date.now() / 1000).toString();
-        const diagnosesToArchive: ArchivedDiagnosis[] = diagnosesData.map(diag => ({
+        const diagnosesToArchive: ArchivedDiagnosis[] = diagnosesData.map((diag: DiagnosisDetail) => ({
           diagnosis: diag.diagnosis,
           treatment: diag.treatment,
           probability: diag.probability,
