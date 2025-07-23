@@ -3,6 +3,8 @@ export interface DiagnosisDetail {
   treatment: string;
   probability: string;
   prevalence?: string;
+  discriminatorSymptoms?: string[];
+  recommendedTests?: string[];
 }
 
 export interface DiagnosisData {
@@ -12,10 +14,19 @@ export interface DiagnosisData {
   follow_up_questions: string[];
 }
 
+export interface ArchivedDiagnosis {
+  diagnosis: string;
+  treatment: string;
+  probability: string;
+  timestamp: string;
+  reason?: string;
+}
+
 export interface DiagnosisResponseDetails {
   conversationId: number;
   diagnoses?: DiagnosisData;
   followUpResponse?: DiagnosisData;
+  archivedDiagnoses?: ArchivedDiagnosis[];
 }
 
 export interface ResponseDetailsProps {

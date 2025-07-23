@@ -3,93 +3,38 @@ import Stepper from 'react-stepper-horizontal';
 import { useMemo, useState, useEffect } from 'react';
 
 import {
-  Healing,
-  Science,
-  BarChart,
-  Assignment,
-  WarningAmber,
-} from '@mui/icons-material';
-import {
-  Box,
-  Card,
   Alert,
-  Badge,
-  Paper,
-  Slide,
-  Stack,
+  Box,
   Button,
-  Divider,
-  Tooltip,
-  Collapse,
-  Snackbar,
-  useTheme,
-  CardHeader,
-  IconButton,
-  Typography,
+  Card,
   CardContent,
+  CardHeader,
+  Divider,
+  Fade,
+  Grid,
+  Grow,
+  Snackbar,
+  Typography,
+  useTheme,
 } from '@mui/material';
+
+import {
+  Assignment,
+  BarChart,
+  CheckCircleOutline,
+  Healing,
+} from '@mui/icons-material';
 
 import { HOST_API } from 'src/config-global';
 
-import { DiagnosisDetail, ResponseDetailsProps } from './types';
+import { ArchivedDiagnosis, DiagnosisDetail, ResponseDetailsProps } from './types';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
+import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
+import RareDiseasePanel from './RareDiseasePanel';
 
 interface OpenAIConfig {
   apiKey: string;
   model: string;
-}
-
-function RareDiseaseCard({ details }: { details: DiagnosisDetail }) {
-  const cardTheme = useTheme();
-
-  return (
-    <Card
-      sx={{
-        mb: 2,
-        bgcolor: 'background.neutral',
-        borderLeft: `6px solid ${cardTheme.palette.warning.main}`,
-      }}
-    >
-      <CardContent>
-        <Stack spacing={2}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Science color="warning" />
-            <Typography variant="subtitle1" fontWeight="bold">
-              {details.diagnosis}
-            </Typography>
-          </Box>
-
-          {details.prevalence && (
-            <Box
-              sx={{
-                bgcolor: 'warning.lighter',
-                p: 1,
-                borderRadius: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 1,
-                maxWidth: 'fit-content'
-              }}
-            >
-              <WarningAmber fontSize="small" color="warning" />
-              <Typography variant="caption" color="warning.darker">
-                Prevalence: {details.prevalence}
-              </Typography>
-            </Box>
-          )}
-
-          <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Probability: {details.probability}
-            </Typography>
-            <Typography variant="body2">
-              {details.treatment}
-            </Typography>
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
 }
 
 export default function ResponseDetails({
@@ -111,11 +56,12 @@ export default function ResponseDetails({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ question: string; answer: string }>
   >([]);
-  const [showRareDiseases, setShowRareDiseases] = useState(false);
+  // const [showRareDiseases, setShowRareDiseases] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [followUpCounter, setFollowUpCounter] = useState(0);
   const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
   const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(null);
+  const [archivedDiagnoses, setArchivedDiagnoses] = useState<ArchivedDiagnosis[]>([]);
 
   // Using useMemo to extract data from responseDetails to avoid redeclaration issues
   const {
@@ -307,44 +253,90 @@ export default function ResponseDetails({
   // Determine which diagnoses to display
   const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : diagnosesData;
 
+  const handleTestResult = async (testName: string, testResult: string, rareDiseaseId: string) => {
+    // Handle test result submission
+    // This will update the diagnosis based on the test result
+    
+    // If we're switching to rare disease without test
+    if (!testName && !testResult) {
+      // Find the rare disease and set it as primary
+      const rareDisease = rareDiseasesData?.find(d => d.diagnosis === rareDiseaseId);
+      if (rareDisease) {
+        // Archive current diagnoses before switching
+        const currentTimestamp = Math.floor(Date.now() / 1000).toString();
+        const diagnosesToArchive: ArchivedDiagnosis[] = diagnosesData.map(diag => ({
+          diagnosis: diag.diagnosis,
+          treatment: diag.treatment,
+          probability: diag.probability,
+          timestamp: currentTimestamp,
+          reason: `Switched to rare disease: ${rareDisease.diagnosis}`,
+        }));
+        
+        setArchivedDiagnoses(prev => [...prev, ...diagnosesToArchive]);
+        setFinalDiagnosis(rareDisease);
+        setActiveStep(0);
+      }
+    } else {
+      // Test result submitted - the backend will handle the Bayesian update
+      // For now, we'll just show a success message
+      // In a real implementation, you'd update the diagnoses based on the backend response
+    }
+  };
+
   return (
-    <Box sx={{ mt: 3 }}>
-      <Stepper
-        steps={displayDiagnoses.map((_: any, idx: number) => ({
-          title: `Diagnosis ${idx + 1}`,
-        }))}
-        activeStep={activeStep}
-        activeColor={theme.palette.primary.main}
-        completeColor={theme.palette.success.main}
-        defaultColor={theme.palette.grey[300]}
-        completeBarColor={theme.palette.success.main}
-        defaultBarColor={theme.palette.grey[300]}
-        barStyle="solid"
-        titleFontSize={14}
-        circleFontSize={14}
-        size={36}
-      />
-      <Box sx={{ mt: 5 }}>
+    <Grid container spacing={3} sx={{ mt: 3 }}>
+      <Grid item xs={12} md={rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
+        <Stepper
+          steps={displayDiagnoses.map((_: any, idx: number) => ({
+            title: `Diagnosis ${idx + 1}`,
+          }))}
+          activeStep={activeStep}
+          activeColor="#0097A7"
+          completeColor="#00897B"
+          defaultColor={theme.palette.grey[300]}
+          completeBarColor="#00897B"
+          defaultBarColor={theme.palette.grey[300]}
+          barStyle="solid"
+          titleFontSize={14}
+          circleFontSize={14}
+          size={36}
+        />
+        <Box sx={{ mt: 5 }}>
         {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
-          <Collapse in={activeStep === idx} timeout="auto" unmountOnExit key={idx}>
-            <Card
-              raised
-              sx={{
-                maxWidth: '100%',
-                mx: 'auto',
-                mt: 5,
-                bgcolor: theme.palette.background.paper,
-                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                borderRadius: '8px',
-              }}
-            >
+          <Grow
+            in={activeStep === idx}
+            timeout={500}
+            style={{ transitionDelay: activeStep === idx ? '100ms' : '0ms' }}
+            key={idx}
+          >
+            <div>
+              <Fade in={activeStep === idx} timeout={600}>
+                <Card
+                  raised
+                  sx={{
+                    maxWidth: '100%',
+                    mx: 'auto',
+                    mt: 5,
+                    bgcolor: theme.palette.background.paper,
+                    boxShadow: finalDiagnosis ? '0px 8px 32px rgba(0, 137, 123, 0.2)' : '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                    borderRadius: '8px',
+                    transition: 'all 0.5s ease-in-out',
+                    transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
+                    border: finalDiagnosis ? '2px solid #00897B' : 'none',
+                  }}
+                >
               <CardHeader
-                title={finalDiagnosis ? "Final Diagnosis" : `Diagnosis Result ${idx + 1}`}
+                title={
+                  <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                    {finalDiagnosis && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                    {finalDiagnosis ? "Confirmed Diagnosis" : `Diagnosis Result ${idx + 1}`}
+                  </Box>
+                }
                 subheader=" "
                 titleTypographyProps={{ align: 'center', variant: 'h4' }}
                 subheaderTypographyProps={{ align: 'center' }}
                 sx={{
-                  backgroundColor: finalDiagnosis ? theme.palette.success.main : theme.palette.primary.main,
+                  backgroundColor: finalDiagnosis ? '#00897B' : '#0097A7',
                   color: theme.palette.common.white,
                   paddingBottom: 3,
                 }}
@@ -376,8 +368,10 @@ export default function ResponseDetails({
                   {details.treatment}
                 </Typography>
               </CardContent>
-            </Card>
-          </Collapse>
+                </Card>
+              </Fade>
+            </div>
+          </Grow>
         ))}
 
         {finalDiagnosis && (
@@ -393,6 +387,9 @@ export default function ResponseDetails({
             based on the provided information. No further follow-up questions needed.
           </Alert>
         )}
+
+        {/* Previous Working Diagnoses Section */}
+        <PreviousWorkingDiagnoses archivedDiagnoses={archivedDiagnoses} />
 
         {showFollowUp && (
           <FollowUpModal
@@ -450,98 +447,33 @@ export default function ResponseDetails({
           Next
         </Button>
 
-        {(rareDiseasesData) && Array.isArray(rareDiseasesData) && rareDiseasesData.length > 0 && (
-          <>
-            <Tooltip title={showRareDiseases ? "Hide rare diseases" : "View rare diseases"} placement="left">
-              <IconButton
-                onClick={() => setShowRareDiseases(prev => !prev)}
-                sx={{
-                  position: 'fixed',
-                  right: showRareDiseases ? 480 : 20,
-                  bottom: 20,
-                  width: 48,
-                  height: 48,
-                  bgcolor: theme.palette.background.paper,
-                  boxShadow: `0 8px 32px -4px ${theme.palette.grey[200]}`,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: theme.palette.background.paper,
-                    transform: 'scale(1.05)',
-                    boxShadow: `0 12px 40px -8px ${theme.palette.grey[300]}`,
-                  },
-                }}
-              >
-                <Badge
-                  badgeContent={rareDiseasesData.length}
-                  color="error"
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      backgroundColor: theme.palette.error.main,
-                      boxShadow: `0 2px 12px -2px ${theme.palette.error.main}`,
-                    },
-                  }}
-                >
-                  <Science
-                    sx={{
-                      color: theme.palette.text.primary,
-                      opacity: 0.8,
-                      fontSize: 24
-                    }}
-                  />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-            <Slide direction="left" in={showRareDiseases} mountOnEnter unmountOnExit>
-              <Paper
-                elevation={0}
-                sx={{
-                  position: 'fixed',
-                  right: 0,
-                  top: 0,
-                  width: 480,
-                  height: '100vh',
-                  overflowY: 'auto',
-                  bgcolor: theme.palette.background.paper,
-                  borderLeft: `1px solid ${theme.palette.divider}`,
-                  p: 4,
-                  zIndex: 1200,
-                }}
-              >
-                <Stack spacing={3}>
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Science
-                      color="warning"
-                      sx={{ fontSize: 28 }}
-                    />
-                    <Typography variant="h5">Rare Disease Considerations</Typography>
-                  </Box>
-
-                  <Alert
-                    severity="info"
-                    sx={{
-                      mb: 2,
-                      '& .MuiAlert-message': {
-                        fontSize: '0.95rem'
-                      }
-                    }}
-                  >
-                    These are rare conditions that share similar symptoms and should be considered in the differential diagnosis.
-                  </Alert>
-
-                  {rareDiseasesData.map((rareDiagnosis: DiagnosisDetail, index: number) => (
-                    <RareDiseaseCard key={index} details={rareDiagnosis} />
-                  ))}
-                </Stack>
-              </Paper>
-            </Slide>
-          </>
-        )}
       </Box>
+      </Grid>
+      
+      {/* Rare Disease Panel - Right Side */}
+      {rareDiseasesData && rareDiseasesData.length > 0 && (
+        <Grid item xs={12} md={4}>
+          <RareDiseasePanel
+            rareDiseases={rareDiseasesData}
+            onTestSubmit={handleTestResult}
+            patientInfo={originalPatientInfo}
+            currentDiagnoses={{
+              common_diagnoses: diagnosesData,
+              rare_diagnoses: rareDiseasesData,
+              disclaimer,
+              follow_up_questions
+            }}
+            conversationId={responseDetails?.conversationId || 0}
+            openAIConfig={openAIConfig}
+          />
+        </Grid>
+      )}
+      
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
       </Snackbar>
-    </Box>
+    </Grid>
   );
 }
