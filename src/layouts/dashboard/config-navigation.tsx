@@ -91,60 +91,28 @@ export function useNavData() {
       // MANAGEMENT
       // ----------------------------------------------------------------------
       {
-        subheader: t('tools'),
+        subheader: t('SmartDiagnosis'),
         items: [
-          // // USER
-          // {
-          //   title: t('user'),
-          //   path: paths.dashboard.user.root,
-          //   icon: ICONS.user,
-          //   children: [
-          //     { title: t('profile'), path: paths.dashboard.user.root },
-          //     { title: t('cards'), path: paths.dashboard.user.cards },
-          //     { title: t('list'), path: paths.dashboard.user.list },
-          //     { title: t('create'), path: paths.dashboard.user.new },
-          //     { title: t('edit'), path: paths.dashboard.user.demo.edit },
-          //     { title: t('account'), path: paths.dashboard.user.account },
-          //   ],
-          // },
-
-
-          // // BLOG
-          // {
-          //   title: t('blog'),
-          //   path: paths.dashboard.post.root,
-          //   icon: ICONS.blog,
-          //   children: [
-          //     { title: t('list'), path: paths.dashboard.post.root },
-          //     { title: t('details'), path: paths.dashboard.post.demo.details },
-          //     { title: t('create'), path: paths.dashboard.post.new },
-          //     { title: t('edit'), path: paths.dashboard.post.demo.edit },
-          //   ],
-          // },
-
-          
-          // FILE MANAGER
+          // NEW DIAGNOSIS
           {
-            title: t('file_manager'),
-            path: paths.dashboard.fileManager,
-            icon: ICONS.folder,
-          },
-
-
-          // CHAT
-          {
-            title: t('chat'),
+            title: 'New Diagnosis',
             path: paths.dashboard.product.new,
             icon: ICONS.chat,
           },
 
-           // HISTORY
-           {
-            title: t('history'),
+          // HISTORY
+          {
+            title: 'History',
             path: paths.dashboard.history.root,
-            icon: ICONS.blog,
+            icon: ICONS.analytics,
           },
 
+          // FILE MANAGER
+          {
+            title: 'File Manager',
+            path: paths.dashboard.fileManager,
+            icon: ICONS.folder,
+          },
         ],
       },
 
