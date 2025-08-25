@@ -51,12 +51,10 @@ export default function App() {
           <ThemeProvider>
             <MotionLazy>
               <SnackbarProvider>
-                <CheckoutProvider>
-                  <SettingsDrawer />
-                  <ProgressBar />
+                <SettingsDrawer />
+                <ProgressBar />
 
-                  <Router />
-                </CheckoutProvider>
+                <Router />
               </SnackbarProvider>
             </MotionLazy>
           </ThemeProvider>
