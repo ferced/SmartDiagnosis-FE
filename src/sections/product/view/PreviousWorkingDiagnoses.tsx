@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
-  CardContent,
   Chip,
-  Collapse,
-  Divider,
   Fade,
-  IconButton,
   Stack,
+  Divider,
+  Collapse,
+  IconButton,
   Typography,
+  CardContent,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-
 import {
   AccessTime as TimeIcon,
-  ExpandMore as ExpandMoreIcon,
   History as HistoryIcon,
+  ExpandMore as ExpandMoreIcon,
   TrendingDown as TrendingDownIcon,
 } from '@mui/icons-material';
 

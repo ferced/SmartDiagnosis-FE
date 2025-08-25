@@ -3,34 +3,32 @@ import Stepper from 'react-stepper-horizontal';
 import { useMemo, useState, useEffect } from 'react';
 
 import {
-  Alert,
+  Healing,
+  BarChart,
+  Assignment,
+  CheckCircleOutline,
+} from '@mui/icons-material';
+import {
   Box,
-  Button,
   Card,
-  CardContent,
-  CardHeader,
-  Divider,
   Fade,
   Grid,
-  Grow,
+  Alert,
+  Button,
+  Divider,
   Snackbar,
-  Typography,
   useTheme,
+  CardHeader,
+  Typography,
+  CardContent,
 } from '@mui/material';
-
-import {
-  Assignment,
-  BarChart,
-  CheckCircleOutline,
-  Healing,
-} from '@mui/icons-material';
 
 import { HOST_API } from 'src/config-global';
 
-import { ArchivedDiagnosis, DiagnosisDetail, ResponseDetailsProps } from './types';
-import FollowUpModal from '../../../components/modals/FollowUpModal';
-import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
 import RareDiseasePanel from './RareDiseasePanel';
+import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
+import FollowUpModal from '../../../components/modals/FollowUpModal';
+import { DiagnosisDetail, ArchivedDiagnosis, ResponseDetailsProps } from './types';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -253,13 +251,11 @@ export default function ResponseDetails({
   // Determine which diagnoses to display
   const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : diagnosesData;
 
-  const handleTestResult = async (testName: string, testResult: string, rareDiseaseId: string) => {
-    // Handle test result submission
-    // This will update the diagnosis based on the test result
+  const handleTestResult = async (decision: string, action: any, rareDiseaseId: string) => {
+    // Handle test result decision from backend
     
-    // If we're switching to rare disease without test
-    if (!testName && !testResult) {
-      // Find the rare disease and set it as primary
+    if (decision === 'CONFIRM' && action.shouldBecomePrimary) {
+      // Find the rare disease and promote it to primary diagnosis
       const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
       if (rareDisease) {
         // Archive current diagnoses before switching
@@ -269,17 +265,58 @@ export default function ResponseDetails({
           treatment: diag.treatment,
           probability: diag.probability,
           timestamp: currentTimestamp,
-          reason: `Switched to rare disease: ${rareDisease.diagnosis}`,
+          reason: `Test confirmed rare disease: ${rareDisease.diagnosis}`,
         }));
         
         setArchivedDiagnoses(prev => [...prev, ...diagnosesToArchive]);
-        setFinalDiagnosis(rareDisease);
+        
+        // Update the rare disease with new probability from test results
+        const updatedRareDisease = {
+          ...rareDisease,
+          probability: action.probability || rareDisease.probability,
+          treatment: action.updatedDiagnosis?.treatment || rareDisease.treatment,
+        };
+        
+        // Set as final diagnosis
+        setFinalDiagnosis(updatedRareDisease);
+        
+        // Clear other diagnoses and show only the confirmed rare disease
+        setResponseDetails((prev: any) => ({
+          ...prev,
+          diagnoses: {
+            ...prev.diagnoses,
+            common_diagnoses: [updatedRareDisease],
+            rare_diagnoses: [],
+          }
+        }));
+        
         setActiveStep(0);
       }
-    } else {
-      // Test result submitted - the backend will handle the Bayesian update
-      // For now, we'll just show a success message
-      // In a real implementation, you'd update the diagnoses based on the backend response
+    } else if (decision === 'RULE_OUT' && action.shouldBeDismissed) {
+      // Remove the rare disease from the list
+      const updatedRareDiseases = rareDiseasesData?.filter(
+        (d: DiagnosisDetail) => d.diagnosis !== rareDiseaseId
+      );
+      
+      // Update the preserved rare diagnoses
+      setPreservedRareDiagnoses(updatedRareDiseases);
+      
+      // Update response details to remove the ruled out disease
+      setResponseDetails((prev: any) => ({
+        ...prev,
+        diagnoses: {
+          ...prev.diagnoses,
+          rare_diagnoses: updatedRareDiseases,
+        }
+      }));
+      
+      // Show a message that the disease was ruled out
+      // You could add a snackbar or alert here
+      console.log(`Rare disease ${rareDiseaseId} has been ruled out based on test results`);
+    } else if (decision === 'INCONCLUSIVE') {
+      // Tests were inconclusive, may need additional testing
+      // You could show the additional tests needed from action.additionalTestsNeeded
+      console.log('Test results were inconclusive. Additional testing may be required.');
     }
   };
 
@@ -303,28 +340,27 @@ export default function ResponseDetails({
         />
         <Box sx={{ mt: 5 }}>
         {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
-          <Grow
-            in={activeStep === idx}
-            timeout={500}
-            style={{ transitionDelay: activeStep === idx ? '100ms' : '0ms' }}
+          <div
             key={idx}
+            style={{
+              display: activeStep === idx ? 'block' : 'none',
+            }}
           >
-            <div>
-              <Fade in={activeStep === idx} timeout={600}>
-                <Card
-                  raised
-                  sx={{
-                    maxWidth: '100%',
-                    mx: 'auto',
-                    mt: 5,
-                    bgcolor: theme.palette.background.paper,
-                    boxShadow: finalDiagnosis ? '0px 8px 32px rgba(0, 137, 123, 0.2)' : '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                    borderRadius: '8px',
-                    transition: 'all 0.5s ease-in-out',
-                    transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
-                    border: finalDiagnosis ? '2px solid #00897B' : 'none',
-                  }}
-                >
+            <Fade in={activeStep === idx} timeout={600}>
+              <Card
+                raised
+                sx={{
+                  maxWidth: '100%',
+                  mx: 'auto',
+                  mt: 5,
+                  bgcolor: theme.palette.background.paper,
+                  boxShadow: finalDiagnosis ? '0px 8px 32px rgba(0, 137, 123, 0.2)' : '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  transition: 'all 0.5s ease-in-out',
+                  transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
+                  border: finalDiagnosis ? '2px solid #00897B' : 'none',
+                }}
+              >
               <CardHeader
                 title={
                   <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
@@ -371,7 +407,6 @@ export default function ResponseDetails({
                 </Card>
               </Fade>
             </div>
-          </Grow>
         ))}
 
         {finalDiagnosis && (
