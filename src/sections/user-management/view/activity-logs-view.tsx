@@ -13,13 +13,13 @@ import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 
 import { paths } from 'src/routes/paths';
+import { HOST_API } from 'src/config-global';
 
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 import { useSnackbar } from 'src/components/snackbar';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 import { TableNoData, TableHeadCustom } from 'src/components/table';
-import { HOST_API } from 'src/config-global';
 
 import ActivityLogRow from '../activity-log-row';
 

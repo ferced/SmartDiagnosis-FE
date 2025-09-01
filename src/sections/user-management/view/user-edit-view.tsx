@@ -4,9 +4,9 @@ import Container from '@mui/material/Container';
 
 import { paths } from 'src/routes/paths';
 import { useParams } from 'src/routes/hooks';
+import { HOST_API } from 'src/config-global';
 
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
-import { HOST_API } from 'src/config-global';
 
 import { IUserItem } from '../types';
 import UserNewEditForm from '../user-new-edit-form';
@@ -47,17 +47,19 @@ export default function UserEditView() {
     <Container maxWidth="lg">
       <CustomBreadcrumbs
         heading="Edit user"
-        links={[
-          {
-            name: 'Dashboard',
-            href: paths.dashboard.root,
-          },
-          {
-            name: 'User',
-            href: paths.dashboard.user.list,
-          },
-          { name: currentUser?.displayName || currentUser?.username || '' },
-        ]}
+        links={
+          [
+            {
+              name: 'Dashboard',
+              href: paths.dashboard.root,
+            },
+            {
+              name: 'User',
+              href: paths.dashboard.user.list,
+            },
+            { name: currentUser?.displayName || currentUser?.username || '' },
+          ]
+        }
         sx={{
           mb: { xs: 3, md: 5 },
         }}

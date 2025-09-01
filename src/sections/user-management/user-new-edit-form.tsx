@@ -13,6 +13,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { HOST_API } from 'src/config-global';
 
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, {
@@ -21,7 +22,6 @@ import FormProvider, {
 } from 'src/components/hook-form';
 
 import { IUserItem } from './types';
-import { HOST_API } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 

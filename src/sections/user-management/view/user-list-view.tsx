@@ -13,6 +13,7 @@ import TablePagination from '@mui/material/TablePagination';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { HOST_API } from 'src/config-global';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
@@ -30,7 +31,6 @@ import {
 import { IUserItem } from '../types';
 import UserTableRow from '../user-table-row';
 import UserTableToolbar from '../user-table-toolbar';
-import { HOST_API } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 
