@@ -21,6 +21,7 @@ import FormProvider, {
 } from 'src/components/hook-form';
 
 import { IUserItem } from './types';
+import { HOST_API } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 
@@ -79,22 +80,22 @@ export default function UserNewEditForm({ currentUser }: Props) {
   const onSubmit = handleSubmit(async (data) => {
     try {
       // Get token from different possible locations
-      const token = localStorage.getItem('accessToken') || 
-                   localStorage.getItem('token') || 
-                   sessionStorage.getItem('accessToken');
-      
+      const token = localStorage.getItem('accessToken') ||
+        localStorage.getItem('token') ||
+        sessionStorage.getItem('accessToken');
+
       if (!token) {
         enqueueSnackbar('No authentication token found. Please login again.', { variant: 'error' });
         router.push(paths.auth.jwt.login);
         return;
       }
 
-      const url = currentUser 
-        ? `http://localhost:3001/user/${currentUser.username}`
-        : 'http://localhost:3001/user';
-      
+      const url = currentUser
+        ? `${HOST_API}/user/${currentUser.username}`
+        : `${HOST_API}/user`;
+
       const method = currentUser ? 'PUT' : 'POST';
-      
+
       const payload = { ...data };
       if (currentUser && !payload.password) {
         delete payload.password;
@@ -143,7 +144,7 @@ export default function UserNewEditForm({ currentUser }: Props) {
               <RHFTextField name="lastName" label="Last Name" />
               <RHFTextField name="displayName" label="Display Name" />
               <RHFTextField name="phoneNumber" label="Phone Number" />
-              
+
               {!currentUser && (
                 <RHFTextField
                   name="password"
@@ -170,7 +171,7 @@ export default function UserNewEditForm({ currentUser }: Props) {
 
             <Stack spacing={3} sx={{ mt: 3 }}>
               <Typography variant="subtitle1">Address Information</Typography>
-              
+
               <Box
                 rowGap={3}
                 columnGap={2}

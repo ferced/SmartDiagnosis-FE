@@ -30,6 +30,7 @@ import {
 import { IUserItem } from '../types';
 import UserTableRow from '../user-table-row';
 import UserTableToolbar from '../user-table-toolbar';
+import { HOST_API } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 
@@ -56,12 +57,12 @@ export default function UserListView() {
   const fetchUsers = useCallback(async () => {
     try {
       const token = sessionStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:3001/users', {
+      const response = await fetch(`${HOST_API}/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
         const users = await response.json();
         setTableData(users || []);
@@ -107,7 +108,7 @@ export default function UserListView() {
     async (id: string) => {
       try {
         const token = sessionStorage.getItem('accessToken');
-        const response = await fetch(`http://localhost:3001/user/${id}`, {
+        const response = await fetch(`${HOST_API}/user/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -133,10 +134,10 @@ export default function UserListView() {
   const handleDeleteRows = useCallback(async () => {
     try {
       const token = sessionStorage.getItem('accessToken');
-      
+
       await Promise.all(
         table.selected.map((id) =>
-          fetch(`http://localhost:3001/user/${id}`, {
+          fetch(`${HOST_API}/user/${id}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -148,7 +149,7 @@ export default function UserListView() {
       const deleteRows = tableData.filter(
         (row) => !table.selected.includes(row.username)
       );
-      
+
       setTableData(deleteRows);
       table.onUpdatePageDeleteRows({
         totalRowsInPage: dataFiltered.length,

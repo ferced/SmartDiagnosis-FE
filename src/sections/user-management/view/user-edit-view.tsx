@@ -6,6 +6,7 @@ import { paths } from 'src/routes/paths';
 import { useParams } from 'src/routes/hooks';
 
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
+import { HOST_API } from 'src/config-global';
 
 import { IUserItem } from '../types';
 import UserNewEditForm from '../user-new-edit-form';
@@ -27,12 +28,12 @@ export default function UserEditView() {
   const fetchUser = async (username: string) => {
     try {
       const token = sessionStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/user/${username}`, {
+      const response = await fetch(`${HOST_API}/user/${username}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
         const user = await response.json();
         setCurrentUser(user);

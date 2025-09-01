@@ -24,6 +24,7 @@ import Scrollbar from 'src/components/scrollbar';
 import { useSnackbar } from 'src/components/snackbar';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 import { useTable, TableNoData, TableHeadCustom } from 'src/components/table';
+import { HOST_API } from 'src/config-global';
 
 import UserStatisticsRow from '../user-statistics-row';
 
@@ -56,7 +57,7 @@ interface UserStatistics {
 export default function UserStatisticsView() {
   const { enqueueSnackbar } = useSnackbar();
   const table = useTable();
-  
+
   const [statistics, setStatistics] = useState<UserStatistics[]>([]);
   const [loading, setLoading] = useState(false);
   const [editLimitDialog, setEditLimitDialog] = useState<{
@@ -69,7 +70,7 @@ export default function UserStatisticsView() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:3001/users/statistics', {
+      const response = await fetch(`${HOST_API}/users/statistics`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -104,7 +105,7 @@ export default function UserStatisticsView() {
     try {
       const token = sessionStorage.getItem('accessToken');
       const response = await fetch(
-        `http://localhost:3001/users/${editLimitDialog.user.userId}/limit`,
+        `${HOST_API}/users/${editLimitDialog.user.userId}/limit`,
         {
           method: 'PUT',
           headers: {

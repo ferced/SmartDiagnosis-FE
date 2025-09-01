@@ -19,6 +19,7 @@ import Scrollbar from 'src/components/scrollbar';
 import { useSnackbar } from 'src/components/snackbar';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 import { TableNoData, TableHeadCustom } from 'src/components/table';
+import { HOST_API } from 'src/config-global';
 
 import ActivityLogRow from '../activity-log-row';
 
@@ -57,7 +58,7 @@ export default function ActivityLogsView() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  
+
   // Filters
   const [filterUsername, setFilterUsername] = useState('');
   const [filterAction, setFilterAction] = useState('all');
@@ -76,7 +77,7 @@ export default function ActivityLogsView() {
       if (filterUsername) params.append('username', filterUsername);
       if (filterAction !== 'all') params.append('action', filterAction);
       if (filterEndpoint) params.append('endpoint', filterEndpoint);
-      
+
       // Add date range
       const endDate = new Date();
       const startDate = new Date();
@@ -84,7 +85,7 @@ export default function ActivityLogsView() {
       params.append('start_date', startDate.toISOString());
       params.append('end_date', endDate.toISOString());
 
-      const response = await fetch(`http://localhost:3001/activity-logs?${params}`, {
+      const response = await fetch(`${HOST_API}/activity-logs?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
