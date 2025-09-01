@@ -14,6 +14,13 @@ const HistoryPage = lazy(() => import('src/pages/dashboard/history'));
 const ConversationPage = lazy(() => import('src/pages/dashboard/conversation'));
 const FileManagerPage = lazy(() => import('src/pages/dashboard/file-manager'));
 
+// USER MANAGEMENT PAGES
+const UserListPage = lazy(() => import('src/pages/dashboard/user/list'));
+const UserCreatePage = lazy(() => import('src/pages/dashboard/user/new'));
+const UserEditPage = lazy(() => import('src/pages/dashboard/user/edit'));
+const ActivityLogsPage = lazy(() => import('src/pages/dashboard/user/activity'));
+const UserStatisticsPage = lazy(() => import('src/pages/dashboard/user/statistics'));
+
 
 // ----------------------------------------------------------------------
 
@@ -45,6 +52,16 @@ export const dashboardRoutes = [
           { element: <HistoryPage />, index: true },
           { path: 'conversation/:id', element: <ConversationPage /> },
         ]
+      },
+      {
+        path: 'user',
+        children: [
+          { path: 'list', element: <UserListPage /> },
+          { path: 'new', element: <UserCreatePage /> },
+          { path: ':id/edit', element: <UserEditPage /> },
+          { path: 'activity', element: <ActivityLogsPage /> },
+          { path: 'statistics', element: <UserStatisticsPage /> },
+        ],
       },
     ],
   },

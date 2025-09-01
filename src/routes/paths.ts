@@ -117,7 +117,12 @@ export const paths = {
     },
     user: {
       root: `${ROOTS.DASHBOARD}/user`,
+      list: `${ROOTS.DASHBOARD}/user/list`,
+      new: `${ROOTS.DASHBOARD}/user/new`,
+      edit: (id: string) => `${ROOTS.DASHBOARD}/user/${id}/edit`,
       account: `${ROOTS.DASHBOARD}/user/account`,
+      activity: `${ROOTS.DASHBOARD}/user/activity`,
+      statistics: `${ROOTS.DASHBOARD}/user/statistics`,
     },
   },
 };

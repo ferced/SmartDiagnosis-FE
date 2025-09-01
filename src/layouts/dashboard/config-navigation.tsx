@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { paths } from 'src/routes/paths';
 
 import { useTranslate } from 'src/locales';
+import { useAuthContext } from 'src/auth/hooks';
 
 import SvgColor from 'src/components/svg-color';
 
@@ -47,6 +48,12 @@ const ICONS = {
 
 export function useNavData() {
   const { t } = useTranslate();
+  const { user } = useAuthContext();
+  
+  const userRole = user?.role || 'user';
+  const isAdmin = userRole === 'admin';
+  const isManager = userRole === 'manager';
+  const isManagerOrAdmin = isAdmin || isManager;
 
   const data = useMemo(
     () => [
@@ -113,7 +120,19 @@ export function useNavData() {
             path: paths.dashboard.fileManager,
             icon: ICONS.folder,
           },
-        ],
+
+          // USER MANAGEMENT - Only show for managers and admins
+          ...(isManagerOrAdmin ? [{
+            title: 'User Management',
+            path: paths.dashboard.user.list,
+            icon: ICONS.user,
+            children: [
+              { title: 'Users List', path: paths.dashboard.user.list },
+              { title: 'Activity Logs', path: paths.dashboard.user.activity },
+              { title: 'Statistics', path: paths.dashboard.user.statistics },
+            ],
+          }] : []),
+        ].filter(Boolean),
       },
 
       // DEMO MENU STATES
@@ -203,7 +222,7 @@ export function useNavData() {
       //   ],
       // },
     ],
-    [t]
+    [t, isManagerOrAdmin]
   );
 
   return data;
