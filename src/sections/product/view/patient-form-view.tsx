@@ -103,7 +103,7 @@ export default function PatientForm() {
       const formattedData = {
         ...data,
         patientName: data.patientName,
-        conversationId: conversationId,
+        conversationId,
         ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config if set
       };
 

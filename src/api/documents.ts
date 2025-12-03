@@ -51,13 +51,27 @@ export const fetchDocuments = async (): Promise<IFile[]> => {
   return (response.data || []).map(mapDocumentToFile);
 };
 
-export const uploadDocuments = async (files: File[], conversationId: number, description?: string) => {
+export const uploadDocuments = async (files: File[], conversationId?: number, description?: string) => {
   const uploaded: IFile[] = [];
+
+  // If no conversationId is provided, create a new conversation first
+  let targetConversationId = conversationId;
+  if (!targetConversationId) {
+    try {
+      const convResponse = await axios.post(`${HOST_API}/conversation`, {}, {
+        headers: getAuthHeaders(),
+      });
+      targetConversationId = convResponse.data.id;
+    } catch (error) {
+      console.error("Failed to create conversation for upload", error);
+      throw new Error("Could not create conversation for file upload");
+    }
+  }
 
   // Upload sequentially to keep it simple and avoid throttling
   // This can be improved later with parallel uploads and progress tracking
   // if needed.
-  /* eslint-disable no-restricted-syntax */
+  /* eslint-disable no-restricted-syntax, no-await-in-loop */
   for (const file of files) {
     const formData = new FormData();
     formData.append('file', file);
@@ -65,7 +79,7 @@ export const uploadDocuments = async (files: File[], conversationId: number, des
       formData.append('description', description);
     }
 
-    const response = await axios.post<DocumentDTO>(`${HOST_API}/conversations/${conversationId}/documents`, formData, {
+    const response = await axios.post<DocumentDTO>(`${HOST_API}/conversations/${targetConversationId}/documents`, formData, {
       headers: {
         ...getAuthHeaders(),
         'Content-Type': 'multipart/form-data',

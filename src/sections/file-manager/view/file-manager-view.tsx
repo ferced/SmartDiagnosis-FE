@@ -243,7 +243,7 @@ export default function FileManagerView() {
           {canReset && renderResults}
         </Stack>
 
-        {loading ? (
+        {loading && (
           <EmptyContent
             filled
             title="Loading documents..."
@@ -251,7 +251,9 @@ export default function FileManagerView() {
               py: 10,
             }}
           />
-        ) : notFound ? (
+        )}
+
+        {!loading && notFound && (
           <EmptyContent
             filled
             title="No Data"
@@ -259,7 +261,9 @@ export default function FileManagerView() {
               py: 10,
             }}
           />
-        ) : (
+        )}
+
+        {!loading && !notFound && (
           <>
             {view === 'list' ? (
               <FileManagerTable
