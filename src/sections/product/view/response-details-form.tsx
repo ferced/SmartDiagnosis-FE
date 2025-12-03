@@ -320,9 +320,55 @@ export default function ResponseDetails({
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      const token = sessionStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await axios.post(
+        `${HOST_API}/reports/pdf`, 
+        {
+          patientInfo: originalPatientInfo,
+          response: {
+            disclaimer,
+            common_diagnoses: diagnosesData,
+            rare_diagnoses: rareDiseasesData,
+            follow_up_questions
+          }
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob', // Important for binary files
+        }
+      );
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'diagnosis_report.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      setError('Failed to download PDF report');
+    }
+  };
+
   return (
     <Grid container spacing={3} sx={{ mt: 3 }}>
       <Grid item xs={12} md={rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button 
+                variant="outlined" 
+                color="secondary" 
+                startIcon={<Assignment />}
+                onClick={handleDownloadPDF}
+            >
+                Download PDF Report
+            </Button>
+        </Box>
         <Stepper
           steps={displayDiagnoses.map((_: any, idx: number) => ({
             title: `Diagnosis ${idx + 1}`,
