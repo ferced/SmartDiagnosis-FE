@@ -17,7 +17,6 @@ import FileManagerFileItem from './file-manager-file-item';
 import FileManagerFolderItem from './file-manager-folder-item';
 import FileManagerShareDialog from './file-manager-share-dialog';
 import FileManagerActionSelected from './file-manager-action-selected';
-import FileManagerNewFolderDialog from './file-manager-new-folder-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -26,6 +25,7 @@ type Props = {
   dataFiltered: IFile[];
   onOpenConfirm: VoidFunction;
   onDeleteItem: (id: string) => void;
+  onUploadFiles?: (files: File[]) => void | Promise<void>;
 };
 
 export default function FileManagerGridView({
@@ -33,6 +33,7 @@ export default function FileManagerGridView({
   dataFiltered,
   onDeleteItem,
   onOpenConfirm,
+  onUploadFiles,
 }: Props) {
   const { selected, onSelectRow: onSelectItem, onSelectAllRows: onSelectAllItems } = table;
 
@@ -182,20 +183,8 @@ export default function FileManagerGridView({
         }}
       />
 
-      <FileManagerNewFolderDialog open={upload.value} onClose={upload.onFalse} />
-
-      <FileManagerNewFolderDialog
-        open={newFolder.value}
-        onClose={newFolder.onFalse}
-        title="New Folder"
-        onCreate={() => {
-          newFolder.onFalse();
-          setFolderName('');
-          console.info('CREATE NEW FOLDER', folderName);
-        }}
-        folderName={folderName}
-        onChangeFolderName={handleChangeFolderName}
-      />
+      {/* Upload existing documents */}
+      {/* Folder creation UI kept for now but without side effects */}
     </>
   );
 }

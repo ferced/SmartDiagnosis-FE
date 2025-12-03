@@ -11,6 +11,7 @@ import { HOST_API } from 'src/config-global';
 
 import FormProvider from 'src/components/hook-form';
 import { OpenAIConfigModal } from 'src/components/openai-config';
+import { uploadDocuments } from 'src/api/documents';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
@@ -85,9 +86,24 @@ export default function PatientForm() {
     }
 
     try {
+      // 1. Create conversation first
+      const conversationResponse = await axios.post(`${HOST_API}/conversation`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const conversationId = conversationResponse.data.id;
+
+      // 2. Upload files if any
+      if (data.files && data.files.length > 0) {
+         const filesToUpload = data.files.filter((f: any) => f instanceof File);
+         if (filesToUpload.length > 0) {
+            await uploadDocuments(filesToUpload, conversationId);
+         }
+      }
+
       const formattedData = {
         ...data,
         patientName: data.patientName,
+        conversationId: conversationId,
         ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config if set
       };
 

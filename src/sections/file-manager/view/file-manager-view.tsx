@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -11,7 +11,7 @@ import { useBoolean } from 'src/hooks/use-boolean';
 
 import { isAfter, isBetween } from 'src/utils/format-time';
 
-import { _allFiles, FILE_TYPE_OPTIONS } from 'src/_mock';
+import { FILE_TYPE_OPTIONS } from 'src/_mock';
 
 import Iconify from 'src/components/iconify';
 import { useSnackbar } from 'src/components/snackbar';
@@ -22,6 +22,7 @@ import { useSettingsContext } from 'src/components/settings';
 import { useTable, getComparator } from 'src/components/table';
 
 import { IFile, IFileFilters, IFileFilterValue } from 'src/types/file';
+import { fetchDocuments, uploadDocuments, deleteDocument } from 'src/api/documents';
 
 import FileManagerTable from '../file-manager-table';
 import FileManagerFilters from '../file-manager-filters';
@@ -55,7 +56,8 @@ export default function FileManagerView() {
 
   const [view, setView] = useState('list');
 
-  const [tableData, setTableData] = useState<IFile[]>(_allFiles);
+  const [tableData, setTableData] = useState<IFile[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [filters, setFilters] = useState(defaultFilters);
 
@@ -77,6 +79,24 @@ export default function FileManagerView() {
     !!filters.name || !!filters.type.length || (!!filters.startDate && !!filters.endDate);
 
   const notFound = (!dataFiltered.length && canReset) || !dataFiltered.length;
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      setLoading(true);
+      try {
+        const docs = await fetchDocuments();
+        setTableData(docs);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load documents', error);
+        enqueueSnackbar('Failed to load documents', { variant: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, [enqueueSnackbar]);
 
   const handleChangeView = useCallback(
     (event: React.MouseEvent<HTMLElement>, newView: string | null) => {
@@ -103,30 +123,58 @@ export default function FileManagerView() {
   }, []);
 
   const handleDeleteItem = useCallback(
-    (id: string) => {
-      const deleteRow = tableData.filter((row) => row.id !== id);
+    async (id: string) => {
+      try {
+        await deleteDocument(id);
 
-      enqueueSnackbar('Delete success!');
+        const deleteRow = tableData.filter((row) => row.id !== id);
+        setTableData(deleteRow);
 
-      setTableData(deleteRow);
-
-      table.onUpdatePageDeleteRow(dataInPage.length);
+        enqueueSnackbar('Delete success!');
+        table.onUpdatePageDeleteRow(dataInPage.length);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to delete document', error);
+        enqueueSnackbar('Failed to delete document', { variant: 'error' });
+      }
     },
     [dataInPage.length, enqueueSnackbar, table, tableData]
   );
 
-  const handleDeleteItems = useCallback(() => {
-    const deleteRows = tableData.filter((row) => !table.selected.includes(row.id));
+  const handleDeleteItems = useCallback(async () => {
+    try {
+      await Promise.all(table.selected.map((id) => deleteDocument(id)));
 
-    enqueueSnackbar('Delete success!');
+      const deleteRows = tableData.filter((row) => !table.selected.includes(row.id));
+      setTableData(deleteRows);
 
-    setTableData(deleteRows);
+      enqueueSnackbar('Delete success!');
 
-    table.onUpdatePageDeleteRows({
-      totalRowsInPage: dataInPage.length,
-      totalRowsFiltered: dataFiltered.length,
-    });
+      table.onUpdatePageDeleteRows({
+        totalRowsInPage: dataInPage.length,
+        totalRowsFiltered: dataFiltered.length,
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete documents', error);
+      enqueueSnackbar('Failed to delete documents', { variant: 'error' });
+    }
   }, [dataFiltered.length, dataInPage.length, enqueueSnackbar, table, tableData]);
+
+  const handleUploadFiles = useCallback(
+    async (files: File[]) => {
+      try {
+        const uploaded = await uploadDocuments(files);
+        setTableData((prev) => [...uploaded, ...prev]);
+        enqueueSnackbar('Upload success!');
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to upload documents', error);
+        enqueueSnackbar('Failed to upload documents', { variant: 'error' });
+      }
+    },
+    [enqueueSnackbar]
+  );
 
   const renderFilters = (
     <Stack
@@ -195,7 +243,15 @@ export default function FileManagerView() {
           {canReset && renderResults}
         </Stack>
 
-        {notFound ? (
+        {loading ? (
+          <EmptyContent
+            filled
+            title="Loading documents..."
+            sx={{
+              py: 10,
+            }}
+          />
+        ) : notFound ? (
           <EmptyContent
             filled
             title="No Data"
@@ -225,7 +281,11 @@ export default function FileManagerView() {
         )}
       </Container>
 
-      <FileManagerNewFolderDialog open={upload.value} onClose={upload.onFalse} />
+      <FileManagerNewFolderDialog
+        open={upload.value}
+        onClose={upload.onFalse}
+        onUploadFiles={handleUploadFiles}
+      />
 
       <ConfirmDialog
         open={confirm.value}

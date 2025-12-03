@@ -18,6 +18,7 @@ interface Props extends DialogProps {
   //
   onCreate?: VoidFunction;
   onUpdate?: VoidFunction;
+  onUploadFiles?: (files: File[]) => void | Promise<void>;
   //
   folderName?: string;
   onChangeFolderName?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -33,6 +34,7 @@ export default function FileManagerNewFolderDialog({
   //
   onCreate,
   onUpdate,
+  onUploadFiles,
   //
   folderName,
   onChangeFolderName,
@@ -60,8 +62,14 @@ export default function FileManagerNewFolderDialog({
   );
 
   const handleUpload = () => {
+    const uploadableFiles = files.filter((file): file is File => file instanceof File);
+
+    if (onUploadFiles && uploadableFiles.length) {
+      onUploadFiles(uploadableFiles);
+    }
+
     onClose();
-    console.info('ON UPLOAD');
+    setFiles([]);
   };
 
   const handleRemoveFile = (inputFile: File | string) => {
