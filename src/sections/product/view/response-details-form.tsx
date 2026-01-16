@@ -473,16 +473,19 @@ export default function ResponseDetails({
         <PreviousWorkingDiagnoses archivedDiagnoses={archivedDiagnoses} />
 
         {showFollowUp && (
-          <FollowUpModal
-            isOpen={showFollowUp}
-            onClose={() => setShowFollowUp(false)}
-            followUpQuestions={follow_up_questions}
-            followUpAnswers={followUpAnswers}
-            setFollowUpAnswers={setFollowUpAnswers}
-            handleSubmit={handleFollowUpSubmit}
-            isLoading={isLoading}
-          />
-        )}
+  <FollowUpModal
+    isOpen={showFollowUp}
+    onClose={() => setShowFollowUp(false)}
+    followUpQuestions={follow_up_questions}
+    followUpAnswers={followUpAnswers}
+    setFollowUpAnswers={setFollowUpAnswers}
+    handleSubmit={handleFollowUpSubmit}
+    isLoading={isLoading}
+    additionalInfo={additionalInfo}
+    setAdditionalInfo={setAdditionalInfo}
+  />
+)}
+
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
         <Button
