@@ -5,14 +5,12 @@ import { IFile } from 'src/types/file';
 
 export interface DocumentDTO {
   id: number;
-  user_id: number;
-  patient_id?: number | null;
+  conversation_id: number;
   name: string;
-  description?: string;
   mime_type: string;
+  s3_key: string;
   size: number;
   created_at: string;
-  updated_at: string;
 }
 
 const getAuthHeaders = () => {
@@ -35,11 +33,11 @@ const mapDocumentToFile = (doc: DocumentDTO): IFile => {
     size: doc.size,
     type,
     url: `${HOST_API}/documents/${doc.id}/download`,
-    tags: doc.description ? [doc.description] : [],
+    tags: [],
     isFavorited: false,
     shared: null,
     createdAt: doc.created_at,
-    modifiedAt: doc.updated_at,
+    modifiedAt: doc.created_at,
   };
 };
 
@@ -56,7 +54,7 @@ export const uploadDocuments = async (files: File[], conversationId?: number, de
 
   // If no conversationId is provided, create a new conversation first
   let targetConversationId = conversationId;
-  if (!targetConversationId) {
+  if (targetConversationId === undefined || targetConversationId === null) {
     try {
       const convResponse = await axios.post(`${HOST_API}/conversation`, {}, {
         headers: getAuthHeaders(),
@@ -68,9 +66,6 @@ export const uploadDocuments = async (files: File[], conversationId?: number, de
     }
   }
 
-  // Upload sequentially to keep it simple and avoid throttling
-  // This can be improved later with parallel uploads and progress tracking
-  // if needed.
   /* eslint-disable no-restricted-syntax, no-await-in-loop */
   for (const file of files) {
     const formData = new FormData();
@@ -80,10 +75,7 @@ export const uploadDocuments = async (files: File[], conversationId?: number, de
     }
 
     const response = await axios.post<DocumentDTO>(`${HOST_API}/conversations/${targetConversationId}/documents`, formData, {
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: getAuthHeaders(),
     });
 
     uploaded.push(mapDocumentToFile(response.data));
@@ -99,4 +91,9 @@ export const deleteDocument = async (id: string) => {
   });
 };
 
-
+export const getDocumentDownloadUrl = async (id: string): Promise<string> => {
+  const response = await axios.get<{ url: string }>(`${HOST_API}/documents/${id}/download`, {
+    headers: getAuthHeaders(),
+  });
+  return response.data.url;
+};

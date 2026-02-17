@@ -54,7 +54,27 @@ export function RHFUploadBox({ name, ...other }: Props) {
 // ----------------------------------------------------------------------
 
 export function RHFUpload({ name, multiple, helperText, ...other }: Props) {
-  const { control } = useFormContext();
+  const { control, setValue } = useFormContext();
+
+  const handleDrop = (acceptedFiles: File[]) => {
+    const newFiles = acceptedFiles.map((file) =>
+      Object.assign(file, { preview: URL.createObjectURL(file) })
+    );
+
+    setValue(name, multiple ? [...(control._formValues[name] || []), ...newFiles] : newFiles[0], {
+      shouldValidate: true,
+    });
+  };
+
+  const handleRemove = (file: File | string) => {
+    const currentFiles = control._formValues[name] || [];
+    const filtered = currentFiles.filter((f: any) => f !== file);
+    setValue(name, filtered, { shouldValidate: true });
+  };
+
+  const handleRemoveAll = () => {
+    setValue(name, [], { shouldValidate: true });
+  };
 
   return (
     <Controller
@@ -65,6 +85,9 @@ export function RHFUpload({ name, multiple, helperText, ...other }: Props) {
           <Upload
             multiple
             files={field.value}
+            onDrop={handleDrop}
+            onRemove={handleRemove}
+            onRemoveAll={handleRemoveAll}
             error={!!error}
             helperText={
               (!!error || helperText) && (
@@ -78,6 +101,8 @@ export function RHFUpload({ name, multiple, helperText, ...other }: Props) {
         ) : (
           <Upload
             file={field.value}
+            onDrop={handleDrop}
+            onDelete={() => setValue(name, null, { shouldValidate: true })}
             error={!!error}
             helperText={
               (!!error || helperText) && (

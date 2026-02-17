@@ -46,12 +46,7 @@ export default function PatientForm() {
     allergies: Yup.string(),
     gender: Yup.string(),
     currentMedications: Yup.string(),
-    files: Yup.array().of(
-      Yup.object().shape({
-        path: Yup.string().required(),
-        description: Yup.string(),
-      })
-    ),
+    files: Yup.array().of(Yup.mixed()),
   });
 
   const methods = useForm({
