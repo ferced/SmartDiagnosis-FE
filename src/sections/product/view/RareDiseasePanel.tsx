@@ -8,6 +8,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
@@ -28,6 +29,8 @@ import {
 
 import { HOST_API } from 'src/config-global';
 
+import Iconify from 'src/components/iconify';
+
 interface RareDisease {
   diagnosis: string;
   treatment: string;
@@ -46,6 +49,13 @@ interface RareDiseasePanelProps {
   openAIConfig?: any;
 }
 
+const getProbabilityColor = (probability: string): 'error' | 'warning' | 'info' => {
+  const lower = probability.toLowerCase();
+  if (lower.includes('high') || lower.includes('likely')) return 'error';
+  if (lower.includes('moderate') || lower.includes('medium')) return 'warning';
+  return 'info';
+};
+
 const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   rareDiseases,
   onTestSubmit,
@@ -54,6 +64,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   conversationId,
   openAIConfig,
 }) => {
+  const theme = useTheme();
   const [selectedDisease, setSelectedDisease] = useState<RareDisease | null>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [testResults, setTestResults] = useState<{ [key: string]: string }>({});
@@ -63,15 +74,14 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
 
   const handleSymptomsResponse = (diseaseId: string, hasSymptoms: boolean) => {
     setSymptomsPresent({ ...symptomsPresent, [diseaseId]: hasSymptoms });
-    
+
     if (hasSymptoms) {
       const disease = rareDiseases.find(d => d.diagnosis === diseaseId);
       if (disease) {
-        // Agregar tests de ejemplo si no vienen del backend
         const diseaseWithTests = {
           ...disease,
-          recommendedTests: disease.recommendedTests && disease.recommendedTests.length > 0 
-            ? disease.recommendedTests 
+          recommendedTests: disease.recommendedTests && disease.recommendedTests.length > 0
+            ? disease.recommendedTests
             : [
                 'Complete Blood Count (CBC)',
                 'Genetic Panel Testing',
@@ -117,17 +127,14 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
         },
       });
 
-      // Handle the decision from backend
       const { decision, action } = response.data;
-      
-      // Call parent callback with the decision and action
+
       onTestSubmit(
-        decision, // CONFIRM, RULE_OUT, or INCONCLUSIVE
-        action, // Contains action type and updated diagnosis details
+        decision,
+        action,
         selectedDisease.diagnosis
       );
-      
-      // Reset state
+
       setShowTestDialog(false);
       setTestResults({});
       setSelectedTests([]);
@@ -149,7 +156,14 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
 
   return (
     <Box sx={{ position: 'sticky', top: 20, maxHeight: 'calc(100vh - 100px)' }}>
-      <Card sx={{ backgroundColor: '#FFF8E1', border: '2px solid #FFB74D', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Card sx={{
+        backgroundColor: theme.palette.warning.lighter,
+        border: '2px solid',
+        borderColor: theme.palette.warning.light,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
         <CardContent sx={{ flex: '0 0 auto', pb: 1 }}>
           <Box display="flex" alignItems="center" gap={1} mb={2}>
             <WarningIcon color="warning" />
@@ -163,105 +177,111 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
             Review discriminator symptoms to rule out critical conditions.
           </Alert>
         </CardContent>
-        
-        <Box 
-          sx={{ 
+
+        <Box
+          sx={{
             flex: '1 1 auto',
             overflowY: 'auto',
             px: 2,
             pb: 2,
-            maxHeight: '500px', // This will show approximately 2 cards
+            maxHeight: '500px',
             '&::-webkit-scrollbar': {
               width: '8px',
             },
             '&::-webkit-scrollbar-track': {
-              backgroundColor: '#f1f1f1',
+              backgroundColor: theme.palette.grey[100],
               borderRadius: '4px',
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#FFB74D',
+              backgroundColor: theme.palette.warning.main,
               borderRadius: '4px',
               '&:hover': {
-                backgroundColor: '#FF9800',
+                backgroundColor: theme.palette.warning.dark,
               },
             },
           }}
         >
           <Stack spacing={2}>
             {rareDiseases && rareDiseases.length > 0 ? (
-              rareDiseases.map((disease, index) => (
-                <Card
-                  key={index}
-                  sx={{
-                    backgroundColor: 'background.paper',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    minHeight: '220px', // Ensures consistent card height
-                  }}
-                >
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                          {disease.diagnosis}
-                        </Typography>
-                        <Chip
-                          label={`Prevalence: ${disease.prevalence}`}
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                        />
-                      </Box>
-
-                      {disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0 && (
+              rareDiseases.map((disease, index) => {
+                const accentColor = getProbabilityColor(disease.probability);
+                return (
+                  <Card
+                    key={index}
+                    sx={{
+                      backgroundColor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderLeft: '4px solid',
+                      borderLeftColor: `${accentColor}.main`,
+                      minHeight: '220px',
+                    }}
+                  >
+                    <CardContent>
+                      <Stack spacing={2}>
                         <Box>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Discriminator symptoms:
+                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                            {disease.diagnosis}
                           </Typography>
-                          <ul style={{ margin: 0, paddingLeft: 20 }}>
-                            {disease.discriminatorSymptoms.map((symptom, idx) => (
-                              <li key={idx}>
-                                <Typography variant="body2">{symptom}</Typography>
-                              </li>
-                            ))}
-                          </ul>
-                        </Box>
-                      )}
-
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>
-                          Are any of these symptoms present in the patient?
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            variant="contained"
+                          <Chip
+                            label={`Prevalence: ${disease.prevalence}`}
                             size="small"
-                            color="error"
-                            onClick={() => handleSymptomsResponse(disease.diagnosis, true)}
-                            disabled={symptomsPresent[disease.diagnosis] !== undefined}
-                          >
-                            Yes
-                          </Button>
-                          <Button
+                            color="warning"
                             variant="outlined"
-                            size="small"
-                            onClick={() => handleSymptomsResponse(disease.diagnosis, false)}
-                            disabled={symptomsPresent[disease.diagnosis] !== undefined}
-                          >
-                            No
-                          </Button>
-                          {symptomsPresent[disease.diagnosis] === true && (
-                            <CheckCircleIcon color="error" />
-                          )}
-                          {symptomsPresent[disease.diagnosis] === false && (
-                            <CheckCircleIcon color="success" />
-                          )}
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              ))
+                          />
+                        </Box>
+
+                        {disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Discriminator symptoms:
+                            </Typography>
+                            <ul style={{ margin: 0, paddingLeft: 20 }}>
+                              {disease.discriminatorSymptoms.map((symptom, idx) => (
+                                <li key={idx}>
+                                  <Typography variant="body2">{symptom}</Typography>
+                                </li>
+                              ))}
+                            </ul>
+                          </Box>
+                        )}
+
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold" gutterBottom>
+                            Are any of these symptoms present in the patient?
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              variant="contained"
+                              size="small"
+                              color="warning"
+                              onClick={() => handleSymptomsResponse(disease.diagnosis, true)}
+                              disabled={symptomsPresent[disease.diagnosis] !== undefined}
+                            >
+                              Present
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              color="success"
+                              onClick={() => handleSymptomsResponse(disease.diagnosis, false)}
+                              disabled={symptomsPresent[disease.diagnosis] !== undefined}
+                            >
+                              Not Present
+                            </Button>
+                            {symptomsPresent[disease.diagnosis] === true && (
+                              <CheckCircleIcon color="warning" />
+                            )}
+                            {symptomsPresent[disease.diagnosis] === false && (
+                              <CheckCircleIcon color="success" />
+                            )}
+                          </Stack>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                );
+              })
             ) : (
               <Typography variant="body2" color="text.secondary">
                 No rare diseases to consider for this diagnosis.
@@ -348,20 +368,21 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
             <Button
               variant="contained"
               color="primary"
-              startIcon={isSubmitting ? <CircularProgress size={20} /> : <BiotechIcon />}
+              startIcon={isSubmitting ? <CircularProgress size={20} /> : <Iconify icon="mdi:test-tube" />}
               onClick={handleTestSubmit}
               disabled={selectedTests.length === 0 || selectedTests.some(test => !testResults[test]) || isSubmitting}
               fullWidth
             >
-              🧪 Submit Test Results
+              Submit Test Results
             </Button>
             <Button
               variant="outlined"
+              startIcon={<Iconify icon="mdi:skip-next" />}
               onClick={handleSkipTest}
               disabled={isSubmitting}
               fullWidth
             >
-              🙅 Skip test and proceed
+              Skip test and proceed
             </Button>
           </Stack>
         </DialogActions>

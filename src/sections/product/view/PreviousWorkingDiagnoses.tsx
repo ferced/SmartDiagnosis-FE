@@ -25,7 +25,7 @@ interface ArchivedDiagnosis {
   treatment: string;
   probability: string;
   timestamp: string;
-  reason?: string; // Why it was archived (e.g., "Test result ruled out", "Lower probability after follow-up")
+  reason?: string;
 }
 
 interface PreviousWorkingDiagnosesProps {
@@ -56,9 +56,10 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
       <Card
         sx={{
           mt: 3,
-          backgroundColor: '#F5F5F5',
-          border: '1px solid #E0E0E0',
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)',
+          backgroundColor: theme.palette.background.neutral,
+          border: '1px solid',
+          borderColor: theme.palette.divider,
+          boxShadow: theme.customShadows?.card || '0px 2px 8px rgba(0, 0, 0, 0.08)',
         }}
       >
         <CardContent sx={{ pb: expanded ? 2 : 1 }}>
@@ -70,7 +71,7 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
             onClick={() => setExpanded(!expanded)}
           >
             <Box display="flex" alignItems="center" gap={1}>
-              <HistoryIcon sx={{ color: '#757575', fontSize: 20 }} />
+              <HistoryIcon sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
               <Typography variant="h6" color="text.secondary">
                 Previous Working Diagnoses
               </Typography>
@@ -98,7 +99,7 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 These diagnoses were considered but are now archived based on additional information or test results.
               </Typography>
-              
+
               <Stack spacing={2}>
                 {archivedDiagnoses.map((diagnosis, index) => (
                   <Fade
@@ -120,7 +121,6 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
                     >
                       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                         <Stack spacing={1.5}>
-                          {/* Header with diagnosis name and archived indicator */}
                           <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Typography variant="subtitle1" fontWeight="medium">
                               {diagnosis.diagnosis}
@@ -134,14 +134,13 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
                             />
                           </Box>
 
-                          {/* Probability and timestamp */}
                           <Box display="flex" alignItems="center" gap={2}>
                             <Chip
                               label={`Probability: ${diagnosis.probability}`}
                               size="small"
                               color="default"
                               variant="filled"
-                              sx={{ backgroundColor: '#EEEEEE' }}
+                              sx={{ backgroundColor: theme.palette.grey[200] }}
                             />
                             <Box display="flex" alignItems="center" gap={0.5}>
                               <TimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -151,7 +150,6 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
                             </Box>
                           </Box>
 
-                          {/* Reason for archiving */}
                           {diagnosis.reason && (
                             <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                               Archived: {diagnosis.reason}
@@ -160,8 +158,7 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
 
                           <Divider />
 
-                          {/* Treatment (collapsed/summarized) */}
-                          <Typography variant="body2" color="text.secondary" sx={{ 
+                          <Typography variant="body2" color="text.secondary" sx={{
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical',

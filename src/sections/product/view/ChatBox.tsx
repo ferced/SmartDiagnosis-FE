@@ -1,11 +1,13 @@
-/* eslint-disable react/no-danger */
 import axios from 'axios';
-import DOMPurify from 'dompurify';
-import { useState, SetStateAction } from 'react';
+import { useSnackbar } from 'notistack';
+import { KeyboardEvent, SetStateAction, useCallback, useState } from 'react';
 
-import { Box, List, Button, Collapse, ListItem, TextField, Typography, ListItemText, CircularProgress } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import { Box, IconButton, Stack, TextField, Typography, useTheme } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
+
+import Markdown from 'src/components/markdown';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -25,53 +27,49 @@ export default function ChatBox({
   setQuestion,
   originalPatientInfo,
   initialResponse,
-  openAIConfig
+  openAIConfig,
 }: ChatBoxProps) {
-  const [askInputShown, setAskInputShown] = useState(false);
+  const theme = useTheme();
+  const { enqueueSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const [currentContext, setCurrentContext] = useState(initialResponse);
-
-  const handleAskNowClick = () => {
-    setAskInputShown((prev) => !prev);
-  };
 
   const handleQuestionChange = (event: { target: { value: SetStateAction<string> } }) => {
     setQuestion(event.target.value);
   };
 
-  const handleSubmitQuestion = async () => {
+  const handleSubmitQuestion = useCallback(async () => {
+    if (!question.trim() || isLoading) return;
+
     setIsLoading(true);
     try {
       const token = sessionStorage.getItem('accessToken');
 
       if (!token) {
-        console.error('No access token found in sessionStorage');
+        enqueueSnackbar('No access token found. Please log in again.', { variant: 'error' });
         setIsLoading(false);
         return;
       }
 
-      // Construir el contexto acumulado incluyendo el historial de conversación
       const contextWithHistory = {
         ...currentContext,
-        conversationHistory: conversationHistory.map(conv => ({
+        conversationHistory: conversationHistory.map((conv) => ({
           question: conv.question,
-          response: conv.response
-        }))
+          response: conv.response,
+        })),
       };
 
       const requestPayload = {
         originalPatientInfo: {
           ...originalPatientInfo,
-          ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config
+          ...(openAIConfig && { openaiConfig: openAIConfig }),
         },
-        initialResponse: contextWithHistory, // Enviar el contexto completo como initialResponse
+        initialResponse: contextWithHistory,
         followUpQuestion: question,
         conversationHistory: [...conversationHistory, { question }],
-        ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config at root level too
+        ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
-
-      console.log('requestPayload with full context', requestPayload);
 
       const rawResponse = await axios.post(`${HOST_API}/diagnosis/followup`, requestPayload, {
         headers: {
@@ -81,22 +79,27 @@ export default function ChatBox({
 
       const newResponse = rawResponse.data.followUpResponse.response;
 
-      // Actualizar el historial y el contexto
       const updatedHistory = [...conversationHistory, { question, response: newResponse }];
       setConversationHistory(updatedHistory);
 
-      // Actualizar el contexto actual para futuras preguntas
       setCurrentContext({
         ...contextWithHistory,
-        conversationHistory: updatedHistory
+        conversationHistory: updatedHistory,
       });
 
-      // Limpiar la pregunta
       setQuestion('');
-      setIsLoading(false);
     } catch (error) {
       console.error('Error submitting question:', error);
+      enqueueSnackbar('Failed to get a response. Please try again.', { variant: 'error' });
+    } finally {
       setIsLoading(false);
+    }
+  }, [question, isLoading, currentContext, conversationHistory, originalPatientInfo, openAIConfig, setQuestion, enqueueSnackbar]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmitQuestion();
     }
   };
 
@@ -105,9 +108,10 @@ export default function ChatBox({
       sx={{
         mt: 5,
         p: 3,
-        border: '1px solid #e0e0e0',
+        border: '1px solid',
+        borderColor: 'divider',
         borderRadius: 2,
-        backgroundColor: '#fafafa',
+        backgroundColor: theme.palette.background.neutral,
       }}
     >
       <Typography variant="h6" gutterBottom>
@@ -115,97 +119,85 @@ export default function ChatBox({
       </Typography>
 
       {conversationHistory.length > 0 && (
-        <Box sx={{ mb: 3, maxHeight: 300, overflow: 'auto' }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Conversation History:
-          </Typography>
-          <List dense>
+        <Box sx={{ mb: 3, maxHeight: 400, overflow: 'auto', px: 1 }}>
+          <Stack spacing={2}>
             {conversationHistory.map((conv, index) => (
-              <div key={index}>
-                <ListItem sx={{ py: 0.5, bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
-                  <ListItemText
-                    primary={`Q: ${conv.question}`}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0.5, bgcolor: 'primary.lighter', mb: 2, borderRadius: 1 }}>
-                  <ListItemText
-                    primary={
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: DOMPurify.sanitize(conv.response.replace(/\n/g, '<br>')),
-                        }}
-                      />
-                    }
-                    primaryTypographyProps={{ variant: 'body2' }}
-                  />
-                </ListItem>
-              </div>
+              <Stack key={index} spacing={1.5}>
+                {/* User bubble - right aligned */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Box
+                    sx={{
+                      maxWidth: '75%',
+                      px: 2,
+                      py: 1.5,
+                      borderRadius: 2,
+                      borderTopRightRadius: 4,
+                      bgcolor: theme.palette.primary.lighter,
+                      color: theme.palette.primary.darker,
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {conv.question}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* AI bubble - left aligned */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <Box
+                    sx={{
+                      maxWidth: '75%',
+                      px: 2,
+                      py: 1.5,
+                      borderRadius: 2,
+                      borderTopLeftRadius: 4,
+                      bgcolor: theme.palette.grey[100],
+                    }}
+                  >
+                    <Markdown>{conv.response}</Markdown>
+                  </Box>
+                </Box>
+              </Stack>
             ))}
-          </List>
+          </Stack>
         </Box>
       )}
 
-      <Collapse in={!askInputShown}>
-        <Button
-          variant="contained"
+      {/* Always-visible input */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 1,
+        }}
+      >
+        <TextField
+          variant="outlined"
+          value={question}
+          onChange={handleQuestionChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Type your question here... (Shift+Enter for newline)"
+          multiline
+          maxRows={4}
+          fullWidth
+          size="small"
+        />
+        <IconButton
           color="primary"
+          onClick={handleSubmitQuestion}
+          disabled={isLoading || !question.trim()}
           sx={{
-            borderRadius: '20px',
-            textTransform: 'none',
-            px: 4,
-            py: '6px',
-            boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-            ':hover': {
-              boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
-            },
-          }}
-          onClick={handleAskNowClick}
-        >
-          Ask Now
-        </Button>
-      </Collapse>
-      <Collapse in={askInputShown}>
-        <Box
-          sx={{
-            mt: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            '&:hover': { bgcolor: 'primary.dark' },
+            '&.Mui-disabled': { bgcolor: theme.palette.action.disabledBackground },
+            width: 40,
+            height: 40,
           }}
         >
-          <TextField
-            variant="outlined"
-            value={question}
-            onChange={handleQuestionChange}
-            placeholder="Type your question here..."
-            sx={{
-              width: '100%',
-              maxWidth: '600px',
-              mr: 1,
-            }}
-            autoFocus
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmitQuestion}
-            sx={{
-              borderRadius: '20px',
-              textTransform: 'none',
-              px: 2,
-              py: '6px',
-              boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-              ':hover': {
-                boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.2)',
-              },
-            }}
-            disabled={isLoading}
-          >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit'}
-          </Button>
-        </Box>
-      </Collapse>
+          <SendIcon fontSize="small" />
+        </IconButton>
+      </Box>
     </Box>
   );
 }

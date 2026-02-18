@@ -1,29 +1,37 @@
 import axios from 'axios';
-import Stepper from 'react-stepper-horizontal';
+import { m } from 'framer-motion';
 import { useMemo, useState, useEffect } from 'react';
 
 import {
   Healing,
   BarChart,
   Assignment,
+  NavigateNext,
+  NavigateBefore,
   CheckCircleOutline,
 } from '@mui/icons-material';
 import {
   Box,
   Card,
-  Fade,
   Grid,
+  Step,
   Alert,
+  Stack,
   Button,
   Divider,
+  Stepper,
   Snackbar,
   useTheme,
-  CardHeader,
+  StepButton,
   Typography,
   CardContent,
+  LinearProgress,
 } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
+
+import Markdown from 'src/components/markdown';
+import { varFade } from 'src/components/animate';
 
 import RareDiseasePanel from './RareDiseasePanel';
 import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
@@ -34,6 +42,22 @@ interface OpenAIConfig {
   apiKey: string;
   model: string;
 }
+
+const getProbabilityPercent = (probability: string): number => {
+  const match = probability.match(/(\d+)/);
+  if (match) return parseInt(match[1], 10);
+  const lower = probability.toLowerCase();
+  if (lower.includes('high') || lower.includes('very likely')) return 80;
+  if (lower.includes('moderate') || lower.includes('likely')) return 55;
+  if (lower.includes('low')) return 25;
+  return 50;
+};
+
+const getProbabilityColor = (percent: number): 'success' | 'warning' | 'error' => {
+  if (percent >= 70) return 'success';
+  if (percent >= 40) return 'warning';
+  return 'error';
+};
 
 export default function ResponseDetails({
   responseDetails,
@@ -54,21 +78,17 @@ export default function ResponseDetails({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ question: string; answer: string }>
   >([]);
-  // const [showRareDiseases, setShowRareDiseases] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [followUpCounter, setFollowUpCounter] = useState(0);
   const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
   const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(null);
   const [archivedDiagnoses, setArchivedDiagnoses] = useState<ArchivedDiagnosis[]>([]);
 
-  // Using useMemo to extract data from responseDetails to avoid redeclaration issues
   const {
     diagnosesData,
     disclaimer,
     follow_up_questions
   } = useMemo(() => {
-    // Check if responseDetails has the right structure and handle the case if it doesn't
-    // Using type assertion to work around TypeScript error
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return {
       diagnosesData: diagnoses.common_diagnoses || [],
@@ -77,15 +97,12 @@ export default function ResponseDetails({
     };
   }, [responseDetails]);
 
-  // Use preserved rare diagnoses if they exist, otherwise use the ones from the response
   const rareDiseasesData = useMemo(() => {
     if (preservedRareDiagnoses) return preservedRareDiagnoses;
-
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return diagnoses.rare_diagnoses || null;
   }, [preservedRareDiagnoses, responseDetails]);
 
-  // Store rare diagnoses when they first appear
   useEffect(() => {
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     if (diagnoses.rare_diagnoses && diagnoses.rare_diagnoses.length > 0 && !preservedRareDiagnoses) {
@@ -93,21 +110,13 @@ export default function ResponseDetails({
     }
   }, [responseDetails, preservedRareDiagnoses]);
 
-  // Effect to set final diagnosis after 3 rounds of follow-up
   useEffect(() => {
     if (followUpCounter >= 3 && diagnosesData.length > 0 && !finalDiagnosis) {
-      // Set the diagnosis with highest probability as final
-      // In a real app, you might want to use a more sophisticated selection method
-      // But for this example, we'll pick the first diagnosis as the "most probable"
       setFinalDiagnosis(diagnosesData[0]);
-
-      // Reset activeStep to show the final diagnosis
       setActiveStep(0);
     }
   }, [followUpCounter, diagnosesData, finalDiagnosis, setActiveStep]);
 
-  // Determine if we should show the Follow Up Questions button
-  // Hide it if only one diagnosis remains or if we've reached 3 follow-ups
   const showFollowUpButton = diagnosesData.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
 
   const handleFollowUpSubmit = async () => {
@@ -123,13 +132,11 @@ export default function ResponseDetails({
     }
 
     try {
-      // Update conversation history
       const newConversationEntries = follow_up_questions.map((question: string, index: number) => ({
         question,
         answer: followUpAnswers[index] || '',
       }));
 
-      // Agregar la entrada de "Add more information" si se ingresó algo
       if (additionalInfo.trim() !== '') {
         newConversationEntries.push({
           question: 'Additional Information',
@@ -140,7 +147,6 @@ export default function ResponseDetails({
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
       setConversationHistory(updatedConversationHistory);
 
-      // Asegurar que la estructura del request sea compatible con el backend
       const followUpRequest = {
         originalPatientInfo: {
           ...originalPatientInfo,
@@ -155,12 +161,11 @@ export default function ResponseDetails({
         },
         initialResponse: {
           disclaimer,
-          // Asegurar que el nombre del campo sea el que espera el backend
-          diagnoses: diagnosesData, // Este es el campo que el backend convertirá a CommonDiagnoses
-          follow_up_questions // Este campo es esperado por el backend
+          diagnoses: diagnosesData,
+          follow_up_questions
         },
-        followUpAnswers,  // Respuestas normales
-        additionalInfo: additionalInfo.trim(), // Agregar el nuevo campo
+        followUpAnswers,
+        additionalInfo: additionalInfo.trim(),
         conversationHistory: updatedConversationHistory.map(entry => ({
           question: entry.question,
           response: entry.answer
@@ -168,69 +173,53 @@ export default function ResponseDetails({
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
-      // Increment follow-up counter
       const newFollowUpCounter = followUpCounter + 1;
       setFollowUpCounter(newFollowUpCounter);
 
-      // If this is the third follow-up, we'll handle the final diagnosis
       if (newFollowUpCounter === 3) {
-        // We'll still send the request to get the backend's response
         const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        console.log('API Response (Final Round):', response.data);
-
-        // But we'll override the result to show only one diagnosis
-        // We'll pick the first diagnosis as the "most probable" one
         const responseData = response.data;
         const diagnosisData = responseData?.followUpResponse || responseData?.diagnoses;
 
         if (diagnosisData && diagnosisData.common_diagnoses && diagnosisData.common_diagnoses.length > 0) {
-          // Pick the first diagnosis from the response
           const finalDiag = diagnosisData.common_diagnoses[0];
           setFinalDiagnosis(finalDiag);
 
-          // Modify the response to only include the final diagnosis
-          // but preserve rare diagnoses if they exist
           const modifiedResponse = {
             ...responseData,
             followUpResponse: {
               ...diagnosisData,
               common_diagnoses: [finalDiag],
-              follow_up_questions: [], // No more follow-up questions
-              rare_diagnoses: preservedRareDiagnoses || diagnosisData.rare_diagnoses // Preserve rare diagnoses
+              follow_up_questions: [],
+              rare_diagnoses: preservedRareDiagnoses || diagnosisData.rare_diagnoses
             }
           };
 
           setResponseDetails(modifiedResponse);
         } else {
-          // If no diagnoses returned, just use the response as is
           setResponseDetails(response.data);
         }
       } else {
-        // For follow-ups 1 and 2, process normally
         const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        console.log('API Response:', response.data);
-
-        // Check if the response has the expected structure
         if (!response.data) {
           throw new Error('Empty response from server');
         }
 
-        // Handle both possible response formats
         setResponseDetails(response.data);
       }
 
       setFollowUpAnswers([]);
-      setAdditionalInfo('');  // Resetear el campo adicional después de enviar
+      setAdditionalInfo('');
       setIsLoading(false);
       setShowFollowUp(false);
       setActiveStep(0);
@@ -248,17 +237,12 @@ export default function ResponseDetails({
     setError(null);
   };
 
-  // Determine which diagnoses to display
   const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : diagnosesData;
 
   const handleTestResult = async (decision: string, action: any, rareDiseaseId: string) => {
-    // Handle test result decision from backend
-    
     if (decision === 'CONFIRM' && action.shouldBecomePrimary) {
-      // Find the rare disease and promote it to primary diagnosis
       const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
       if (rareDisease) {
-        // Archive current diagnoses before switching
         const currentTimestamp = Math.floor(Date.now() / 1000).toString();
         const diagnosesToArchive: ArchivedDiagnosis[] = diagnosesData.map((diag: DiagnosisDetail) => ({
           diagnosis: diag.diagnosis,
@@ -267,20 +251,17 @@ export default function ResponseDetails({
           timestamp: currentTimestamp,
           reason: `Test confirmed rare disease: ${rareDisease.diagnosis}`,
         }));
-        
+
         setArchivedDiagnoses(prev => [...prev, ...diagnosesToArchive]);
-        
-        // Update the rare disease with new probability from test results
+
         const updatedRareDisease = {
           ...rareDisease,
           probability: action.probability || rareDisease.probability,
           treatment: action.updatedDiagnosis?.treatment || rareDisease.treatment,
         };
-        
-        // Set as final diagnosis
+
         setFinalDiagnosis(updatedRareDisease);
-        
-        // Clear other diagnoses and show only the confirmed rare disease
+
         setResponseDetails((prev: any) => ({
           ...prev,
           diagnoses: {
@@ -289,19 +270,16 @@ export default function ResponseDetails({
             rare_diagnoses: [],
           }
         }));
-        
+
         setActiveStep(0);
       }
     } else if (decision === 'RULE_OUT' && action.shouldBeDismissed) {
-      // Remove the rare disease from the list
       const updatedRareDiseases = rareDiseasesData?.filter(
         (d: DiagnosisDetail) => d.diagnosis !== rareDiseaseId
       );
-      
-      // Update the preserved rare diagnoses
+
       setPreservedRareDiagnoses(updatedRareDiseases);
-      
-      // Update response details to remove the ruled out disease
+
       setResponseDetails((prev: any) => ({
         ...prev,
         diagnoses: {
@@ -309,13 +287,7 @@ export default function ResponseDetails({
           rare_diagnoses: updatedRareDiseases,
         }
       }));
-      
-      // Show a message that the disease was ruled out
-      // You could add a snackbar or alert here
-      console.log(`Rare disease ${rareDiseaseId} has been ruled out based on test results`);
     } else if (decision === 'INCONCLUSIVE') {
-      // Tests were inconclusive, may need additional testing
-      // You could show the additional tests needed from action.additionalTestsNeeded
       console.log('Test results were inconclusive. Additional testing may be required.');
     }
   };
@@ -326,7 +298,7 @@ export default function ResponseDetails({
       if (!token) return;
 
       const response = await axios.post(
-        `${HOST_API}/reports/pdf`, 
+        `${HOST_API}/reports/pdf`,
         {
           patientInfo: originalPatientInfo,
           response: {
@@ -338,11 +310,10 @@ export default function ResponseDetails({
         },
         {
           headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob', // Important for binary files
+          responseType: 'blob',
         }
       );
 
-      // Create blob link to download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -356,181 +327,209 @@ export default function ResponseDetails({
     }
   };
 
+  const fadeInUp = varFade().inUp;
+
   return (
     <Grid container spacing={3} sx={{ mt: 3 }}>
       <Grid item xs={12} md={rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-            <Button 
-                variant="outlined" 
-                color="secondary" 
-                startIcon={<Assignment />}
-                onClick={handleDownloadPDF}
-            >
-                Download PDF Report
-            </Button>
-        </Box>
-        <Stepper
-          steps={displayDiagnoses.map((_: any, idx: number) => ({
-            title: `Diagnosis ${idx + 1}`,
-          }))}
-          activeStep={activeStep}
-          activeColor="#0097A7"
-          completeColor="#00897B"
-          defaultColor={theme.palette.grey[300]}
-          completeBarColor="#00897B"
-          defaultBarColor={theme.palette.grey[300]}
-          barStyle="solid"
-          titleFontSize={14}
-          circleFontSize={14}
-          size={36}
-        />
-        <Box sx={{ mt: 5 }}>
-        {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
-          <div
-            key={idx}
-            style={{
-              display: activeStep === idx ? 'block' : 'none',
-            }}
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<Assignment />}
+            onClick={handleDownloadPDF}
           >
-            <Fade in={activeStep === idx} timeout={600}>
-              <Card
-                raised
+            Download PDF Report
+          </Button>
+        </Box>
+
+        {/* MUI Stepper */}
+        <Stepper nonLinear activeStep={activeStep} sx={{ mb: 4 }}>
+          {displayDiagnoses.map((_: any, idx: number) => (
+            <Step key={idx} completed={false}>
+              <StepButton
+                onClick={() => {
+                  setActiveStep(idx);
+                  setShowFollowUp(false);
+                }}
                 sx={{
-                  maxWidth: '100%',
-                  mx: 'auto',
-                  mt: 5,
-                  bgcolor: theme.palette.background.paper,
-                  boxShadow: finalDiagnosis ? '0px 8px 32px rgba(0, 137, 123, 0.2)' : '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  transition: 'all 0.5s ease-in-out',
-                  transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
-                  border: finalDiagnosis ? '2px solid #00897B' : 'none',
+                  '& .MuiStepLabel-label': {
+                    fontWeight: activeStep === idx ? 'bold' : 'normal',
+                  },
                 }}
               >
-              <CardHeader
-                title={
-                  <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                    {finalDiagnosis && <CheckCircleOutline sx={{ fontSize: 36 }} />}
-                    {finalDiagnosis ? "Confirmed Diagnosis" : `Diagnosis Result ${idx + 1}`}
+                Diagnosis {idx + 1}
+              </StepButton>
+            </Step>
+          ))}
+        </Stepper>
+
+        <Box sx={{ mt: 2 }}>
+          {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
+            <div
+              key={idx}
+              style={{
+                display: activeStep === idx ? 'block' : 'none',
+              }}
+            >
+              <m.div {...fadeInUp}>
+                <Card
+                  raised
+                  sx={{
+                    maxWidth: '100%',
+                    mx: 'auto',
+                    bgcolor: theme.palette.background.paper,
+                    boxShadow: finalDiagnosis
+                      ? theme.customShadows?.success || '0px 8px 32px rgba(0, 137, 123, 0.2)'
+                      : theme.customShadows?.card || '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                    borderRadius: '8px',
+                    transition: 'all 0.5s ease-in-out',
+                    transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
+                    border: finalDiagnosis ? `2px solid ${theme.palette.success.dark}` : 'none',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      backgroundColor: finalDiagnosis ? theme.palette.success.dark : theme.palette.info.dark,
+                      color: theme.palette.common.white,
+                      p: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                      {finalDiagnosis && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                      <Typography variant="h4">
+                        {finalDiagnosis ? 'Confirmed Diagnosis' : `Diagnosis Result ${idx + 1}`}
+                      </Typography>
+                    </Box>
                   </Box>
-                }
-                subheader=" "
-                titleTypographyProps={{ align: 'center', variant: 'h4' }}
-                subheaderTypographyProps={{ align: 'center' }}
-                sx={{
-                  backgroundColor: finalDiagnosis ? '#00897B' : '#0097A7',
-                  color: theme.palette.common.white,
-                  paddingBottom: 3,
-                }}
-              />
-              <CardContent>
-                <Box display="flex" alignItems="center" my={2}>
-                  <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-                  <Typography variant="h6">Diagnosis</Typography>
-                </Box>
-                <Typography paragraph sx={{ ml: 4 }}>
-                  {details.diagnosis}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-                <Box display="flex" alignItems="center" my={2}>
-                  <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
-                  <Typography variant="h6">Probability</Typography>
-                </Box>
-                <Typography paragraph sx={{ ml: 4 }}>
-                  {finalDiagnosis ? "High" : details.probability}
-                </Typography>
 
-                <Divider sx={{ my: 2 }} />
+                  <CardContent>
+                    {/* Diagnosis */}
+                    <Box display="flex" alignItems="center" my={2}>
+                      <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
+                      <Typography variant="h6">Diagnosis</Typography>
+                    </Box>
+                    <Typography paragraph sx={{ ml: 4 }}>
+                      {details.diagnosis}
+                    </Typography>
 
-                <Box display="flex" alignItems="center" my={2}>
-                  <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-                  <Typography variant="h6">Treatment</Typography>
-                </Box>
-                <Typography paragraph sx={{ ml: 4 }}>
-                  {details.treatment}
-                </Typography>
-              </CardContent>
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Probability with bar */}
+                    <Box display="flex" alignItems="center" my={2}>
+                      <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
+                      <Typography variant="h6">Probability</Typography>
+                    </Box>
+                    <Box sx={{ ml: 4 }}>
+                      <Typography paragraph>
+                        {finalDiagnosis ? 'High' : details.probability}
+                      </Typography>
+                      {(() => {
+                        const percent = getProbabilityPercent(finalDiagnosis ? 'High' : details.probability);
+                        const barColor = getProbabilityColor(percent);
+                        return (
+                          <LinearProgress
+                            variant="determinate"
+                            value={percent}
+                            color={barColor}
+                            sx={{ height: 8, borderRadius: 1, mb: 2 }}
+                          />
+                        );
+                      })()}
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Treatment with Markdown */}
+                    <Box display="flex" alignItems="center" my={2}>
+                      <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+                      <Typography variant="h6">Treatment</Typography>
+                    </Box>
+                    <Box sx={{ ml: 4 }}>
+                      <Markdown>{details.treatment}</Markdown>
+                    </Box>
+                  </CardContent>
                 </Card>
-              </Fade>
+              </m.div>
             </div>
-        ))}
+          ))}
 
-        {finalDiagnosis && (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            Final diagnosis reached: The system has determined this is the most probable diagnosis
-            based on the provided information after 3 rounds of follow-up questions.
-          </Alert>
-        )}
+          {finalDiagnosis && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Final diagnosis reached: The system has determined this is the most probable diagnosis
+              based on the provided information after 3 rounds of follow-up questions.
+            </Alert>
+          )}
 
-        {displayDiagnoses.length === 1 && !finalDiagnosis && (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            Final diagnosis reached: The system has determined this is the most probable diagnosis
-            based on the provided information. No further follow-up questions needed.
-          </Alert>
-        )}
+          {displayDiagnoses.length === 1 && !finalDiagnosis && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Final diagnosis reached: The system has determined this is the most probable diagnosis
+              based on the provided information. No further follow-up questions needed.
+            </Alert>
+          )}
 
-        {/* Previous Working Diagnoses Section */}
-        <PreviousWorkingDiagnoses archivedDiagnoses={archivedDiagnoses} />
+          <PreviousWorkingDiagnoses archivedDiagnoses={archivedDiagnoses} />
 
-        {showFollowUp && (
-          <FollowUpModal
-            isOpen={showFollowUp}
-            onClose={() => setShowFollowUp(false)}
-            followUpQuestions={follow_up_questions}
-            followUpAnswers={followUpAnswers}
-            setFollowUpAnswers={setFollowUpAnswers}
-            handleSubmit={handleFollowUpSubmit}
-            isLoading={isLoading}
-          />
-        )}
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={activeStep === 0}
-          onClick={() => {
-            setActiveStep((prev) => Math.max(prev - 1, 0));
-            setShowFollowUp(false);
-          }}
-        >
-          Previous
-        </Button>
+          {showFollowUp && (
+            <FollowUpModal
+              isOpen={showFollowUp}
+              onClose={() => setShowFollowUp(false)}
+              followUpQuestions={follow_up_questions}
+              followUpAnswers={followUpAnswers}
+              setFollowUpAnswers={setFollowUpAnswers}
+              handleSubmit={handleFollowUpSubmit}
+              isLoading={isLoading}
+            />
+          )}
+        </Box>
 
-        {/* Show follow-up rounds counter */}
-        {followUpCounter > 0 && !finalDiagnosis && (
-          <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-            Follow-up rounds: {followUpCounter}/3
-          </Typography>
-        )}
-
-        {/* Only show Follow Up Questions button if multiple diagnoses remain, questions exist, and we haven't reached 3 follow-ups */}
-        {showFollowUpButton && (
+        {/* Navigation buttons */}
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3 }}>
           <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setShowFollowUp(true)}
-            sx={{ mt: 2 }}
+            variant="outlined"
+            startIcon={<NavigateBefore />}
+            disabled={activeStep === 0}
+            onClick={() => {
+              setActiveStep((prev) => Math.max(prev - 1, 0));
+              setShowFollowUp(false);
+            }}
           >
-            Follow Up Questions
+            Previous
           </Button>
-        )}
 
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={activeStep === displayDiagnoses.length - 1}
-          onClick={() => {
-            setActiveStep((prev) => Math.min(prev + 1, displayDiagnoses.length - 1));
-            setShowFollowUp(false);
-          }}
-        >
-          Next
-        </Button>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {followUpCounter > 0 && !finalDiagnosis && (
+              <Typography variant="body2" color="text.secondary">
+                Follow-up rounds: {followUpCounter}/3
+              </Typography>
+            )}
 
-      </Box>
+            {showFollowUpButton && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setShowFollowUp(true)}
+              >
+                Follow Up Questions
+              </Button>
+            )}
+          </Stack>
+
+          <Button
+            variant="outlined"
+            endIcon={<NavigateNext />}
+            disabled={activeStep === displayDiagnoses.length - 1}
+            onClick={() => {
+              setActiveStep((prev) => Math.min(prev + 1, displayDiagnoses.length - 1));
+              setShowFollowUp(false);
+            }}
+          >
+            Next
+          </Button>
+        </Stack>
       </Grid>
-      
+
       {/* Rare Disease Panel - Right Side */}
       {rareDiseasesData && rareDiseasesData.length > 0 && (
         <Grid item xs={12} md={4}>
@@ -549,7 +548,7 @@ export default function ResponseDetails({
           />
         </Grid>
       )}
-      
+
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
           {error}

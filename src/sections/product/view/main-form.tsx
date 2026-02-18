@@ -6,11 +6,11 @@ import {
   Card,
   Chip,
   Grid,
-  Alert,
   Stack,
   Button,
   Select,
   MenuItem,
+  useTheme,
   CardHeader,
   InputLabel,
   Typography,
@@ -40,6 +40,7 @@ export default function MainForm({
   openAIConfig,
   onOpenAIConfigClick
 }: MainFormProps) {
+  const theme = useTheme();
   const { setValue } = methods;
 
   const handleAutoFill = () => {
@@ -81,40 +82,96 @@ export default function MainForm({
   return (
     <>
       <Grid container spacing={3}>
-        <Grid xs={12}>
+        <Grid item xs={12}>
           <Card>
             <CardHeader title="Patient Details" />
             <Stack spacing={3} sx={{ p: 3 }}>
-              <RHFTextField name="patientName" label="Patient Name" />
-              <RHFTextField name="age" label="Age" type="number" />
-              <Controller
-                name="gender"
-                control={methods.control}
-                render={({ field }) => (
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="gender-label">Gender</InputLabel>
-                    <Select {...field} labelId="gender-label" label="Gender" defaultValue="">
-                      <MenuItem value="male">Male</MenuItem>
-                      <MenuItem value="female">Female</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-              <RHFTextField name="symptoms" label="Symptoms" multiline rows={4} />
-              <RHFTextField name="medicalHistory" label="Medical History" multiline rows={7} />
-              <RHFTextField name="allergies" label="Allergies" />
-              <RHFTextField name="currentMedications" label="Current Medications" />
-              <RHFUpload multiple thumbnail name="files" />
-            </Stack>
-          </Card>
-        </Grid>
+              {/* Demographics */}
+              <Typography variant="overline" color="text.secondary">
+                Demographics
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <RHFTextField name="patientName" label="Patient Name" />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <RHFTextField name="age" label="Age" type="number" />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Controller
+                    name="gender"
+                    control={methods.control}
+                    render={({ field }) => (
+                      <FormControl fullWidth variant="outlined">
+                        <InputLabel id="gender-label">Gender</InputLabel>
+                        <Select {...field} labelId="gender-label" label="Gender" defaultValue="">
+                          <MenuItem value="male">Male</MenuItem>
+                          <MenuItem value="female">Female</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+              </Grid>
 
-        {/* OpenAI Configuration Card */}
-        <Grid xs={12}>
-          <Card>
-            <CardHeader
-              title="AI Model Configuration"
-              action={
+              {/* Clinical Information */}
+              <Typography variant="overline" color="text.secondary" sx={{ mt: 1 }}>
+                Clinical Information
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <RHFTextField name="symptoms" label="Symptoms" multiline rows={4} />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <RHFTextField name="medicalHistory" label="Medical History" multiline rows={4} />
+                </Grid>
+              </Grid>
+
+              {/* Additional Details */}
+              <Typography variant="overline" color="text.secondary" sx={{ mt: 1 }}>
+                Additional Details
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <RHFTextField name="allergies" label="Allergies" />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <RHFTextField name="currentMedications" label="Current Medications" />
+                </Grid>
+                <Grid item xs={12}>
+                  <RHFUpload multiple thumbnail name="files" />
+                </Grid>
+              </Grid>
+
+              {/* AI Model Configuration - inline */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 2,
+                  borderRadius: 1,
+                  bgcolor: 'background.neutral',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <AutoAwesome sx={{ color: 'primary.main', fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    AI Model:
+                  </Typography>
+                  <Chip
+                    label={openAIConfig ? openAIConfig.model : 'GPT-4o (Default)'}
+                    color={openAIConfig ? 'primary' : 'default'}
+                    size="small"
+                  />
+                  {openAIConfig && (
+                    <Typography variant="caption" color="text.disabled">
+                      Key: ••••{openAIConfig.apiKey.slice(-4)}
+                    </Typography>
+                  )}
+                </Box>
                 <Button
                   variant="outlined"
                   startIcon={<Settings />}
@@ -123,36 +180,8 @@ export default function MainForm({
                 >
                   Configure
                 </Button>
-              }
-            />
-            <Box sx={{ p: 3 }}>
-              {openAIConfig ? (
-                <Stack spacing={2}>
-                  <Alert severity="success" icon={<AutoAwesome />}>
-                    Using your custom OpenAI configuration
-                  </Alert>
-                  <Box display="flex" gap={2} alignItems="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Model:
-                    </Typography>
-                    <Chip
-                      label={openAIConfig.model}
-                      color="primary"
-                      size="small"
-                    />
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    API Key: ••••••••{openAIConfig.apiKey.slice(-4)}
-                  </Typography>
-                </Stack>
-              ) : (
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    Using system default (GPT-4o). Configure your own API key to choose different models and manage your own costs.
-                  </Typography>
-                </Alert>
-              )}
-            </Box>
+              </Box>
+            </Stack>
           </Card>
         </Grid>
       </Grid>
@@ -166,44 +195,45 @@ export default function MainForm({
           sx={{
             borderRadius: 2,
             padding: '10px 30px',
-            boxShadow: '0 3px 5px 2px rgba(105, 140, 255, .3)',
-            ':hover': { boxShadow: '0 5px 7px 3px rgba(105, 140, 255, .4)' },
+            boxShadow: theme.customShadows?.primary || '0 3px 5px 2px rgba(105, 140, 255, .3)',
+            ':hover': { boxShadow: theme.customShadows?.primary || '0 5px 7px 3px rgba(105, 140, 255, .4)' },
             textTransform: 'none',
             fontWeight: 'bold',
           }}
         >
           {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit Patient Information'}
         </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleAutoFill}
-          sx={{
-            borderRadius: 2,
-            padding: '10px 30px',
-            boxShadow: '0 3px 5px 2px rgba(105, 140, 255, .3)',
-            ':hover': { boxShadow: '0 5px 7px 3px rgba(105, 140, 255, .4)' },
-            textTransform: 'none',
-            fontWeight: 'bold',
-          }}
-        >
-          Auto Fill & Submit
-        </Button>
-        <Button
-          variant="contained"
-          color="warning"
-          onClick={handleRareDiseaseAutoFill}
-          sx={{
-            borderRadius: 2,
-            padding: '10px 30px',
-            boxShadow: '0 3px 5px 2px rgba(255, 183, 77, .3)',
-            ':hover': { boxShadow: '0 5px 7px 3px rgba(255, 183, 77, .4)' },
-            textTransform: 'none',
-            fontWeight: 'bold',
-          }}
-        >
-          Rare Disease Auto Fill & Submit
-        </Button>
+
+        {import.meta.env.DEV && (
+          <>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleAutoFill}
+              sx={{
+                borderRadius: 2,
+                padding: '10px 30px',
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Auto Fill & Submit
+            </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={handleRareDiseaseAutoFill}
+              sx={{
+                borderRadius: 2,
+                padding: '10px 30px',
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Rare Disease Auto Fill & Submit
+            </Button>
+          </>
+        )}
       </Stack>
     </>
   );

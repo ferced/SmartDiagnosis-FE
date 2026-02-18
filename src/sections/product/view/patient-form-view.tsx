@@ -1,26 +1,55 @@
 import axios from 'axios';
 import * as Yup from 'yup';
 import { useState, useEffect } from 'react';
+import { m, AnimatePresence } from 'framer-motion';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
-import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
+import { Alert, Box, Card, Grid, Skeleton, Snackbar, Stack } from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
+import { uploadDocuments } from 'src/api/documents';
+import { varFade } from 'src/components/animate';
 import FormProvider from 'src/components/hook-form';
 import { OpenAIConfigModal } from 'src/components/openai-config';
-import { uploadDocuments } from 'src/api/documents';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
 import { DiagnosisResponseDetails } from './types';
-import ResponseDetails from './response-details-form';  // Import the shared types
+import ResponseDetails from './response-details-form';
 
 interface OpenAIConfig {
   apiKey: string;
   model: string;
+}
+
+function LoadingSkeleton() {
+  return (
+    <Box sx={{ mt: 3 }}>
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Analyzing patient information and generating diagnosis...
+      </Alert>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card sx={{ p: 3 }}>
+            <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 1, mb: 3 }} />
+            <Stack spacing={2}>
+              <Skeleton variant="text" width="60%" height={32} />
+              <Skeleton variant="text" width="100%" />
+              <Skeleton variant="text" width="100%" />
+              <Skeleton variant="text" width="80%" />
+              <Skeleton variant="rectangular" height={8} sx={{ borderRadius: 1 }} />
+              <Skeleton variant="text" width="40%" height={32} sx={{ mt: 2 }} />
+              <Skeleton variant="text" width="100%" />
+              <Skeleton variant="text" width="90%" />
+              <Skeleton variant="text" width="70%" />
+            </Stack>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
 }
 
 export default function PatientForm() {
@@ -34,7 +63,6 @@ export default function PatientForm() {
   const [followUpAnswers, setFollowUpAnswers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // OpenAI Configuration state
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig | null>(null);
   const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
 
@@ -55,7 +83,6 @@ export default function PatientForm() {
 
   const { reset, handleSubmit } = methods;
 
-  // Load saved OpenAI config on component mount
   useEffect(() => {
     const savedConfig = sessionStorage.getItem('openaiConfig');
     if (savedConfig) {
@@ -81,13 +108,11 @@ export default function PatientForm() {
     }
 
     try {
-      // 1. Create conversation first
       const conversationResponse = await axios.post(`${HOST_API}/conversation`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const conversationId = conversationResponse.data.id;
 
-      // 2. Upload files if any
       if (data.files && data.files.length > 0) {
          const filesToUpload = data.files.filter((f: any) => f instanceof File);
          if (filesToUpload.length > 0) {
@@ -99,7 +124,7 @@ export default function PatientForm() {
         ...data,
         patientName: data.patientName,
         conversationId,
-        ...(openAIConfig && { openaiConfig: openAIConfig }), // Include OpenAI config if set
+        ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
       const response = await axios.post(`${HOST_API}/diagnoses/submit`, formattedData, {
@@ -107,9 +132,6 @@ export default function PatientForm() {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      // Log the response structure to help debug
-      console.log('API Response:', response.data);
 
       setResponseDetails(response.data);
       setActiveStep(0);
@@ -133,83 +155,105 @@ export default function PatientForm() {
     setOpenAIConfig(config);
   };
 
-  // Helper function to safely check for diagnoses
   const hasDiagnoses = () => {
-    // Check for responseDetails.diagnoses structure
     if (responseDetails?.diagnoses?.common_diagnoses && responseDetails.diagnoses.common_diagnoses.length > 0) {
       return true;
     }
-
-    // Check for responseDetails.followUpResponse structure using type assertion
     const response = responseDetails as any;
     if (response?.followUpResponse?.common_diagnoses && response.followUpResponse.common_diagnoses.length > 0) {
       return true;
     }
-
     return false;
   };
 
-  // Helper function to get the active diagnosis regardless of structure
   const getActiveDiagnosis = () => {
     if (responseDetails && responseDetails.diagnoses?.common_diagnoses &&
       responseDetails.diagnoses.common_diagnoses.length > 0) {
       return responseDetails.diagnoses.common_diagnoses[activeStep];
     }
-
-    // Using type assertion to handle followUpResponse
     const response = responseDetails as any;
     if (response && response.followUpResponse?.common_diagnoses &&
       response.followUpResponse.common_diagnoses.length > 0) {
       return response.followUpResponse.common_diagnoses[activeStep];
     }
-
     return null;
   };
+
+  const fadeIn = varFade().in;
 
   return (
     <>
       <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
-        {!responseReceived && (
-          <MainForm
-            methods={methods}
-            isLoading={isLoading}
-            handleSubmit={handleSubmit(onSubmit)}
-            openAIConfig={openAIConfig}
-            onOpenAIConfigClick={() => setShowOpenAIConfig(true)}
-          />
+        <AnimatePresence mode="wait">
+          {/* Loading skeleton */}
+          {isLoading && !responseReceived && (
+            <m.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <LoadingSkeleton />
+            </m.div>
+          )}
+
+          {/* Form */}
+          {!responseReceived && !isLoading && (
+            <m.div
+              key="form"
+              {...fadeIn}
+            >
+              <MainForm
+                methods={methods}
+                isLoading={isLoading}
+                handleSubmit={handleSubmit(onSubmit)}
+                openAIConfig={openAIConfig}
+                onOpenAIConfigClick={() => setShowOpenAIConfig(true)}
+              />
+            </m.div>
+          )}
+
+          {/* Results */}
+          {responseReceived && responseDetails && hasDiagnoses() && (
+            <m.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <ResponseDetails
+                responseDetails={responseDetails}
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                showFollowUp={showFollowUp}
+                setShowFollowUp={setShowFollowUp}
+                followUpAnswers={followUpAnswers}
+                setFollowUpAnswers={setFollowUpAnswers}
+                originalPatientInfo={originalPatientInfo}
+                isLoading={isLoading}
+                setIsLoading={setIsLoading}
+                setResponseDetails={setResponseDetails}
+                openAIConfig={openAIConfig}
+              />
+              <ChatBox
+                question={question}
+                setQuestion={setQuestion}
+                originalPatientInfo={originalPatientInfo}
+                initialResponse={getActiveDiagnosis()}
+                openAIConfig={openAIConfig}
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {responseReceived && responseDetails && !hasDiagnoses() && (
+          <Alert severity="warning">
+            No diagnoses were returned. Please check the patient information and try again.
+          </Alert>
         )}
-        {responseReceived && responseDetails && hasDiagnoses() ? (
-          <>
-            <ResponseDetails
-              responseDetails={responseDetails}
-              activeStep={activeStep}
-              setActiveStep={setActiveStep}
-              showFollowUp={showFollowUp}
-              setShowFollowUp={setShowFollowUp}
-              followUpAnswers={followUpAnswers}
-              setFollowUpAnswers={setFollowUpAnswers}
-              originalPatientInfo={originalPatientInfo}
-              isLoading={isLoading}
-              setIsLoading={setIsLoading}
-              setResponseDetails={setResponseDetails}
-              openAIConfig={openAIConfig} // Pass OpenAI config to ResponseDetails
-            />
-            <ChatBox
-              question={question}
-              setQuestion={setQuestion}
-              originalPatientInfo={originalPatientInfo}
-              initialResponse={getActiveDiagnosis()}
-              openAIConfig={openAIConfig} // Pass OpenAI config to ChatBox
-            />
-          </>
-        ) : (
-          responseReceived &&
-          responseDetails && (
-            <Alert severity="warning">
-              No diagnoses were returned. Please check the patient information and try again.
-            </Alert>
-          )
-        )}
+
         <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
           <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
             {error}

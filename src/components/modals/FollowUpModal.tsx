@@ -2,10 +2,15 @@ import React from 'react';
 
 import {
   Box,
-  Modal,
+  Chip,
   Button,
+  Dialog,
   TextField,
   Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
+  LinearProgress,
   CircularProgress,
 } from '@mui/material';
 
@@ -28,67 +33,78 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
   setFollowUpAnswers,
   handleSubmit,
   isLoading,
-}) => (
-  <Modal
-    open={isOpen}
-    onClose={onClose}
-    aria-labelledby="follow-up-modal-title"
-    aria-describedby="follow-up-modal-description"
-  >
-    <Box
-      sx={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '90vw',
-        maxWidth: '600px',
-        maxHeight: '80vh',
-        bgcolor: 'background.paper',
-        boxShadow: 24,
-        p: 4,
-        borderRadius: 2,
-        overflowY: 'auto',
-      }}
+}) => {
+  const answeredCount = followUpAnswers.filter((a) => a && a.trim().length > 0).length;
+  const totalCount = followUpQuestions?.length || 0;
+  const progress = totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
+
+  return (
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      aria-labelledby="follow-up-modal-title"
     >
-      <Typography
-        id="follow-up-modal-title"
-        variant="h5"
-        align="center"
-        gutterBottom
-        sx={{
-          fontSize: { xs: '1.2rem', sm: '1.5rem' },
-        }}
-      >
-        Follow Up Questions
-      </Typography>
-    {followUpQuestions?.map((question, index) => (
-        <Box key={index} mb={3}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: { xs: '0.9rem', sm: '1rem' },
-            }}
-          >
-            {question}
-          </Typography>
-          <TextField
-            fullWidth
-            variant="outlined"
-            value={followUpAnswers[index] || ''}
-            onChange={(e) => {
-              const newAnswers = [...followUpAnswers];
-              newAnswers[index] = e.target.value;
-              setFollowUpAnswers(newAnswers);
-            }}
-            sx={{
-              mt: 1,
-              input: { fontSize: { xs: '0.9rem', sm: '1rem' } },
-            }}
+      <DialogTitle id="follow-up-modal-title" sx={{ pb: 1 }}>
+        <Typography variant="h5" align="center" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+          Follow Up Questions
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              Progress
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {answeredCount} / {totalCount} answered
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{ borderRadius: 1, height: 6 }}
           />
         </Box>
-      ))}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        {followUpQuestions?.map((question, index) => (
+          <Box key={index} mb={3}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1 }}>
+              <Chip
+                label={index + 1}
+                size="small"
+                color="primary"
+                sx={{ minWidth: 28, fontWeight: 'bold' }}
+              />
+              <Typography
+                variant="subtitle1"
+                sx={{ fontSize: { xs: '0.9rem', sm: '1rem' }, fontWeight: 500 }}
+              >
+                {question}
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              variant="outlined"
+              value={followUpAnswers[index] || ''}
+              onChange={(e) => {
+                const newAnswers = [...followUpAnswers];
+                newAnswers[index] = e.target.value;
+                setFollowUpAnswers(newAnswers);
+              }}
+              placeholder="Type your answer..."
+              sx={{
+                ml: 4.5,
+                width: 'calc(100% - 36px)',
+                input: { fontSize: { xs: '0.9rem', sm: '1rem' } },
+              }}
+            />
+          </Box>
+        ))}
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2 }}>
         <Button
           variant="outlined"
           onClick={onClose}
@@ -111,9 +127,9 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
         >
           {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Submit'}
         </Button>
-      </Box>
-    </Box>
-  </Modal>
-);
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 export default FollowUpModal;
