@@ -96,7 +96,8 @@ export default function PatientForm() {
   }, []);
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
-    setOriginalPatientInfo(data);
+    const { files, ...patientData } = data;
+    setOriginalPatientInfo(patientData);
     setIsLoading(true);
 
     const token = sessionStorage.getItem('accessToken');
@@ -113,16 +114,15 @@ export default function PatientForm() {
       });
       const conversationId = conversationResponse.data.id;
 
-      if (data.files && data.files.length > 0) {
-         const filesToUpload = data.files.filter((f: any) => f instanceof File);
+      if (files && files.length > 0) {
+         const filesToUpload = files.filter((f: any) => f instanceof File);
          if (filesToUpload.length > 0) {
             await uploadDocuments(filesToUpload, conversationId);
          }
       }
 
       const formattedData = {
-        ...data,
-        patientName: data.patientName,
+        ...patientData,
         conversationId,
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
