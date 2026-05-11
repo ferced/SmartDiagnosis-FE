@@ -5,6 +5,7 @@ export interface DiagnosisDetail {
   prevalence?: string;
   discriminatorSymptoms?: string[];
   recommendedTests?: string[];
+  testConfirmed?: boolean;
 }
 
 export interface DiagnosisData {
