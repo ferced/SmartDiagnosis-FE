@@ -407,11 +407,11 @@ export default function ResponseDetails({
                     <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
                       {(finalDiagnosis || details.testConfirmed) && <CheckCircleOutline sx={{ fontSize: 36 }} />}
                       <Typography variant="h4">
-                        {details.testConfirmed
-                          ? 'Test-confirmed Diagnosis'
-                          : finalDiagnosis
-                            ? 'Confirmed Diagnosis'
-                            : `Diagnosis Result ${idx + 1}`}
+                        {(() => {
+                          if (details.testConfirmed) return 'Test-confirmed Diagnosis';
+                          if (finalDiagnosis) return 'Confirmed Diagnosis';
+                          return `Diagnosis Result ${idx + 1}`;
+                        })()}
                       </Typography>
                     </Box>
                   </Box>
