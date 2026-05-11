@@ -237,39 +237,47 @@ export default function ResponseDetails({
     setError(null);
   };
 
-  const displayDiagnoses = finalDiagnosis ? [finalDiagnosis] : diagnosesData;
+  const displayDiagnoses = diagnosesData;
 
   const handleTestResult = async (decision: string, action: any, rareDiseaseId: string) => {
     if (decision === 'CONFIRM' && action.shouldBecomePrimary) {
       const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
       if (rareDisease) {
-        const currentTimestamp = Math.floor(Date.now() / 1000).toString();
-        const diagnosesToArchive: ArchivedDiagnosis[] = diagnosesData.map((diag: DiagnosisDetail) => ({
-          diagnosis: diag.diagnosis,
-          treatment: diag.treatment,
-          probability: diag.probability,
-          timestamp: currentTimestamp,
-          reason: `Test confirmed rare disease: ${rareDisease.diagnosis}`,
-        }));
-
-        setArchivedDiagnoses(prev => [...prev, ...diagnosesToArchive]);
-
-        const updatedRareDisease = {
+        const confirmedRareDisease: DiagnosisDetail = {
           ...rareDisease,
           probability: action.probability || rareDisease.probability,
           treatment: action.updatedDiagnosis?.treatment || rareDisease.treatment,
+          testConfirmed: true,
         };
 
-        setFinalDiagnosis(updatedRareDisease);
+        const remainingRareDiagnoses = (rareDiseasesData || []).filter(
+          (d: DiagnosisDetail) => d.diagnosis !== rareDiseaseId
+        );
 
-        setResponseDetails((prev: any) => ({
-          ...prev,
-          diagnoses: {
-            ...prev.diagnoses,
-            common_diagnoses: [updatedRareDisease],
-            rare_diagnoses: [],
-          }
-        }));
+        setPreservedRareDiagnoses(remainingRareDiagnoses);
+
+        const auditEntry: ArchivedDiagnosis = {
+          diagnosis: confirmedRareDisease.diagnosis,
+          treatment: confirmedRareDisease.treatment,
+          probability: confirmedRareDisease.probability,
+          timestamp: Math.floor(Date.now() / 1000).toString(),
+          reason: `Promoted from rare diseases panel after positive test result`,
+        };
+        setArchivedDiagnoses(prev => [...prev, auditEntry]);
+
+        setResponseDetails((prev: any) => {
+          const prevDiagnoses = prev?.diagnoses || (prev as any)?.followUpResponse || {};
+          const existingCommon: DiagnosisDetail[] = prevDiagnoses.common_diagnoses || [];
+          const dedupedCommon = existingCommon.filter((d) => d.diagnosis !== rareDiseaseId);
+          return {
+            ...prev,
+            diagnoses: {
+              ...prevDiagnoses,
+              common_diagnoses: [confirmedRareDisease, ...dedupedCommon],
+              rare_diagnoses: remainingRareDiagnoses,
+            },
+          };
+        });
 
         setActiveStep(0);
       }
@@ -379,27 +387,31 @@ export default function ResponseDetails({
                     maxWidth: '100%',
                     mx: 'auto',
                     bgcolor: theme.palette.background.paper,
-                    boxShadow: finalDiagnosis
+                    boxShadow: (finalDiagnosis || details.testConfirmed)
                       ? theme.customShadows?.success || '0px 8px 32px rgba(0, 137, 123, 0.2)'
                       : theme.customShadows?.card || '0px 4px 20px rgba(0, 0, 0, 0.1)',
                     borderRadius: '8px',
                     transition: 'all 0.5s ease-in-out',
-                    transform: finalDiagnosis ? 'scale(1.02)' : 'scale(1)',
-                    border: finalDiagnosis ? `2px solid ${theme.palette.success.dark}` : 'none',
+                    transform: (finalDiagnosis || details.testConfirmed) ? 'scale(1.02)' : 'scale(1)',
+                    border: (finalDiagnosis || details.testConfirmed) ? `2px solid ${theme.palette.success.dark}` : 'none',
                   }}
                 >
                   <Box
                     sx={{
-                      backgroundColor: finalDiagnosis ? theme.palette.success.dark : theme.palette.info.dark,
+                      backgroundColor: (finalDiagnosis || details.testConfirmed) ? theme.palette.success.dark : theme.palette.info.dark,
                       color: theme.palette.common.white,
                       p: 3,
                       textAlign: 'center',
                     }}
                   >
                     <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                      {finalDiagnosis && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                      {(finalDiagnosis || details.testConfirmed) && <CheckCircleOutline sx={{ fontSize: 36 }} />}
                       <Typography variant="h4">
-                        {finalDiagnosis ? 'Confirmed Diagnosis' : `Diagnosis Result ${idx + 1}`}
+                        {(() => {
+                          if (details.testConfirmed) return 'Test-confirmed Diagnosis';
+                          if (finalDiagnosis) return 'Confirmed Diagnosis';
+                          return `Diagnosis Result ${idx + 1}`;
+                        })()}
                       </Typography>
                     </Box>
                   </Box>
