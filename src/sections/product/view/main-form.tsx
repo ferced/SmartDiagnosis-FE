@@ -162,7 +162,7 @@ export default function MainForm({
                     AI Model:
                   </Typography>
                   <Chip
-                    label={openAIConfig ? openAIConfig.model : 'GPT-4o (Default)'}
+                    label={openAIConfig ? openAIConfig.model : 'GPT-5.5 (Default)'}
                     color={openAIConfig ? 'primary' : 'default'}
                     size="small"
                   />
