@@ -65,7 +65,7 @@ export default function OpenAIConfigModal({
     initialConfig
 }: OpenAIConfigModalProps) {
     const [apiKey, setApiKey] = useState(initialConfig?.apiKey || '');
-    const [selectedModel, setSelectedModel] = useState(initialConfig?.model || 'gpt-4o');
+    const [selectedModel, setSelectedModel] = useState(initialConfig?.model || 'gpt-5.5');
     const [models, setModels] = useState<OpenAIModel[]>([]);
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export default function OpenAIConfigModal({
                         <Alert severity="info">
                             <Typography variant="body2">
                                 Configure your own OpenAI API key to use your preferred model and manage your own costs.
-                                Leave empty to use the system default (GPT-4o).
+                                Leave empty to use the system default (GPT-5.5).
                             </Typography>
                         </Alert>
 
