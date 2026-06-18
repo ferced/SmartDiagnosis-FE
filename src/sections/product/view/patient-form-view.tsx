@@ -5,7 +5,18 @@ import { m, AnimatePresence } from 'framer-motion';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
-import { Alert, Box, Card, Grid, Skeleton, Snackbar, Stack } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Card,
+  Grid,
+  Skeleton,
+  Snackbar,
+  Stack,
+  Typography,
+  LinearProgress,
+  CircularProgress,
+} from '@mui/material';
 
 import { HOST_API } from 'src/config-global';
 
@@ -24,12 +35,49 @@ interface OpenAIConfig {
   model: string;
 }
 
+const LOADING_STAGES = [
+  'Analyzing symptoms and patient history…',
+  'Generating the most probable differential diagnoses…',
+  'Screening for rare and ultra-rare conditions…',
+  'Cross-checking drug interactions and allergies…',
+  'Compiling clinical evidence and follow-up questions…',
+  'Finalizing diagnoses and treatment plan…',
+];
+
 function LoadingSkeleton() {
+  const [stageIdx, setStageIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const tick = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const advance = setInterval(
+      () => setStageIdx((i) => Math.min(i + 1, LOADING_STAGES.length - 1)),
+      7000
+    );
+    return () => {
+      clearInterval(tick);
+      clearInterval(advance);
+    };
+  }, []);
+
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+
   return (
     <Box sx={{ mt: 3 }}>
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Analyzing patient information and generating diagnosis...
+      <Alert severity="info" icon={<CircularProgress size={22} />} sx={{ mb: 2 }}>
+        <Stack spacing={0.5}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            {LOADING_STAGES[stageIdx]}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Running several AI analyses in parallel — this usually takes 30–90s.
+            Elapsed {mm}:{ss}. You can keep this tab open; nothing is frozen.
+            {elapsed >= 90 && ' Complex or ultra-rare cases can take a little longer.'}
+          </Typography>
+        </Stack>
       </Alert>
+      <LinearProgress sx={{ mb: 3, height: 6, borderRadius: 1 }} />
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Card sx={{ p: 3 }}>

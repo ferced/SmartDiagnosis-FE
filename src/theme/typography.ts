@@ -29,8 +29,8 @@ declare module '@mui/material/styles' {
   }
 }
 
-export const primaryFont = 'Public Sans, sans-serif';
-export const secondaryFont = 'Barlow, sans-serif';
+export const primaryFont = 'Inter, sans-serif';
+export const secondaryFont = 'Inter, sans-serif';
 
 // ----------------------------------------------------------------------
 

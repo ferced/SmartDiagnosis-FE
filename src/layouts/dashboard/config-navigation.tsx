@@ -114,6 +114,13 @@ export function useNavData() {
             icon: ICONS.analytics,
           },
 
+          // PATIENT TIMELINE
+          {
+            title: 'Patient Timeline',
+            path: paths.dashboard.patientTimeline,
+            icon: ICONS.calendar,
+          },
+
           // FILE MANAGER
           {
             title: 'File Manager',

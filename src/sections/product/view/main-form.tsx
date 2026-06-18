@@ -15,6 +15,8 @@ import {
   InputLabel,
   Typography,
   FormControl,
+  ToggleButton,
+  ToggleButtonGroup,
   CircularProgress,
 } from '@mui/material';
 
@@ -141,6 +143,31 @@ export default function MainForm({
                 <Grid item xs={12}>
                   <RHFUpload multiple thumbnail name="files" />
                 </Grid>
+                <Grid item xs={12}>
+                  <Controller
+                    name="imageAnalysisType"
+                    control={methods.control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                          Image Analysis Mode (optional)
+                        </Typography>
+                        <ToggleButtonGroup
+                          value={field.value || ''}
+                          exclusive
+                          onChange={(_, val) => field.onChange(val || '')}
+                          size="small"
+                        >
+                          <ToggleButton value="">General</ToggleButton>
+                          <ToggleButton value="dermatology">Dermatology</ToggleButton>
+                          <ToggleButton value="radiology">Radiology</ToggleButton>
+                          <ToggleButton value="pathology">Pathology</ToggleButton>
+                        </ToggleButtonGroup>
+                      </Box>
+                    )}
+                  />
+                </Grid>
               </Grid>
 
               {/* AI Model Configuration - inline */}
@@ -162,7 +189,7 @@ export default function MainForm({
                     AI Model:
                   </Typography>
                   <Chip
-                    label={openAIConfig ? openAIConfig.model : 'GPT-4o (Default)'}
+                    label={openAIConfig ? openAIConfig.model : 'GPT-5.5 (Default)'}
                     color={openAIConfig ? 'primary' : 'default'}
                     size="small"
                   />

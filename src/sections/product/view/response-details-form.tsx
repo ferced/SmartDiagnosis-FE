@@ -30,9 +30,9 @@ import {
 
 import { HOST_API } from 'src/config-global';
 
-import Markdown from 'src/components/markdown';
 import { varFade } from 'src/components/animate';
 
+import TreatmentPlan from './TreatmentPlan';
 import RareDiseasePanel from './RareDiseasePanel';
 import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
@@ -83,6 +83,12 @@ export default function ResponseDetails({
   const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
   const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(null);
   const [archivedDiagnoses, setArchivedDiagnoses] = useState<ArchivedDiagnosis[]>([]);
+  const [finalNarrative, setFinalNarrative] = useState<string | null>(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  // Structured case state captured from the rare-disease test panel, fed back
+  // into the backend prompts so the engine does not re-recommend tests already
+  // performed (it receives them as authoritative "Known Case State").
+  const [completedTests, setCompletedTests] = useState<{ name: string; result: string }[]>([]);
 
   const {
     diagnosesData,
@@ -111,11 +117,77 @@ export default function ResponseDetails({
   }, [responseDetails, preservedRareDiagnoses]);
 
   useEffect(() => {
-    if (followUpCounter >= 3 && diagnosesData.length > 0 && !finalDiagnosis) {
+    if (finalDiagnosis || diagnosesData.length === 0) return;
+    // The case is concluded either after the 3 follow-up rounds, or as soon as
+    // the workup converges to a single remaining diagnosis after any round.
+    // Both must flip to the dedicated conclusion view (hide the rule-out panel,
+    // surface the full writeup) — not only the 3-round path.
+    const convergedToOne = followUpCounter > 0 && diagnosesData.length === 1;
+    if (followUpCounter >= 3 || convergedToOne) {
       setFinalDiagnosis(diagnosesData[0]);
       setActiveStep(0);
     }
   }, [followUpCounter, diagnosesData, finalDiagnosis, setActiveStep]);
+
+  // Once a final diagnosis is reached, fetch the consolidated diagnosis + full
+  // treatment writeup from the singular /diagnosis/followup endpoint (the only
+  // path that returns the complete prose plan) and surface it on the main view,
+  // instead of forcing the clinician to re-query it in the free-text ChatBox.
+  useEffect(() => {
+    if (!finalDiagnosis || finalNarrative || narrativeLoading) return;
+
+    const fetchFinalNarrative = async () => {
+      const token = sessionStorage.getItem('accessToken');
+      if (!token) return;
+
+      setNarrativeLoading(true);
+      try {
+        const payload = {
+          originalPatientInfo: {
+            ...originalPatientInfo,
+            patientName: originalPatientInfo.patientName || '',
+            age: parseInt(originalPatientInfo.age, 10) || 0,
+            gender: originalPatientInfo.gender || '',
+            symptoms: originalPatientInfo.symptoms || '',
+            medicalHistory: originalPatientInfo.medicalHistory || '',
+            allergies: originalPatientInfo.allergies || '',
+            currentMedications: originalPatientInfo.currentMedications || '',
+            ...(completedTests.length > 0 && { completedTests }),
+            ...(openAIConfig && { openaiConfig: openAIConfig }),
+          },
+          initialResponse: {
+            disclaimer,
+            diagnosis: finalDiagnosis.diagnosis,
+            treatment: finalDiagnosis.treatment,
+            probability: finalDiagnosis.probability,
+            follow_up_questions: [],
+            rare_diagnoses: preservedRareDiagnoses || rareDiseasesData || [],
+          },
+          followUpQuestion:
+            'Provide the consolidated final diagnosis and the complete recommended treatment plan as a clear, comprehensive writeup.',
+          conversationHistory: conversationHistory.map((entry) => ({
+            question: entry.question,
+            response: entry.answer,
+          })),
+          ...(openAIConfig && { openaiConfig: openAIConfig }),
+        };
+
+        const resp = await axios.post(`${HOST_API}/diagnosis/followup`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const narrative = resp?.data?.followUpResponse?.response;
+        if (narrative) setFinalNarrative(narrative);
+      } catch (err) {
+        console.error('Error fetching final diagnosis writeup:', err);
+      } finally {
+        setNarrativeLoading(false);
+      }
+    };
+
+    fetchFinalNarrative();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalDiagnosis, finalNarrative]);
 
   const showFollowUpButton = diagnosesData.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
 
@@ -157,6 +229,7 @@ export default function ResponseDetails({
           medicalHistory: originalPatientInfo.medicalHistory || '',
           allergies: originalPatientInfo.allergies || '',
           currentMedications: originalPatientInfo.currentMedications || '',
+          ...(completedTests.length > 0 && { completedTests }),
           ...(openAIConfig && { openaiConfig: openAIConfig }),
         },
         initialResponse: {
@@ -239,7 +312,24 @@ export default function ResponseDetails({
 
   const displayDiagnoses = diagnosesData;
 
-  const handleTestResult = async (decision: string, action: any, rareDiseaseId: string) => {
+  const handleTestResult = async (
+    decision: string,
+    action: any,
+    rareDiseaseId: string,
+    performedTests?: { name: string; result: string }[]
+  ) => {
+    // Accumulate the tests the clinician actually ran (with results) so later
+    // diagnosis/treatment calls don't re-order them.
+    if (performedTests && performedTests.length > 0) {
+      setCompletedTests((prev) => {
+        const byName = new Map(prev.map((t) => [t.name, t]));
+        performedTests.forEach((t) => {
+          if (t.name) byName.set(t.name, { name: t.name, result: t.result || '' });
+        });
+        return Array.from(byName.values());
+      });
+    }
+
     if (decision === 'CONFIRM' && action.shouldBecomePrimary) {
       const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
       if (rareDisease) {
@@ -305,14 +395,24 @@ export default function ResponseDetails({
       const token = sessionStorage.getItem('accessToken');
       if (!token) return;
 
+      // Never let the report's "Diagnosis Results" section come out empty: when a
+      // final diagnosis is reached, send it (with the full narrative as its
+      // treatment) so the deliverable always carries the conclusion on screen.
+      const pdfDiagnoses = (() => {
+        if (finalDiagnosis) {
+          return [{ ...finalDiagnosis, treatment: finalNarrative || finalDiagnosis.treatment }];
+        }
+        return diagnosesData;
+      })();
+
       const response = await axios.post(
         `${HOST_API}/reports/pdf`,
         {
           patientInfo: originalPatientInfo,
           response: {
             disclaimer,
-            common_diagnoses: diagnosesData,
-            rare_diagnoses: rareDiseasesData,
+            common_diagnoses: pdfDiagnoses,
+            rare_diagnoses: finalDiagnosis ? [] : rareDiseasesData,
             follow_up_questions
           }
         },
@@ -339,7 +439,7 @@ export default function ResponseDetails({
 
   return (
     <Grid container spacing={3} sx={{ mt: 3 }}>
-      <Grid item xs={12} md={rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
+      <Grid item xs={12} md={!finalDiagnosis && rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="outlined"
@@ -459,7 +559,18 @@ export default function ResponseDetails({
                       <Typography variant="h6">Treatment</Typography>
                     </Box>
                     <Box sx={{ ml: 4 }}>
-                      <Markdown>{details.treatment}</Markdown>
+                      {finalDiagnosis && narrativeLoading && !finalNarrative ? (
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <LinearProgress sx={{ flexGrow: 1, height: 6, borderRadius: 1 }} />
+                          <Typography variant="caption" color="text.secondary">
+                            Compiling full treatment plan…
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <TreatmentPlan
+                          markdown={finalDiagnosis && finalNarrative ? finalNarrative : details.treatment}
+                        />
+                      )}
                     </Box>
                   </CardContent>
                 </Card>
@@ -542,8 +653,8 @@ export default function ResponseDetails({
         </Stack>
       </Grid>
 
-      {/* Rare Disease Panel - Right Side */}
-      {rareDiseasesData && rareDiseasesData.length > 0 && (
+      {/* Rare Disease Panel - Right Side (hidden once a final diagnosis is reached) */}
+      {!finalDiagnosis && rareDiseasesData && rareDiseasesData.length > 0 && (
         <Grid item xs={12} md={4}>
           <RareDiseasePanel
             rareDiseases={rareDiseasesData}

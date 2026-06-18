@@ -104,6 +104,15 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
         ))}
       </DialogContent>
 
+      {isLoading && (
+        <Box sx={{ px: 3, pt: 1 }}>
+          <LinearProgress sx={{ borderRadius: 1, height: 5, mb: 1 }} />
+          <Typography variant="caption" color="text.secondary">
+            Re-evaluating the case with your answers — this can take up to a minute. Nothing is frozen.
+          </Typography>
+        </Box>
+      )}
+
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button
           variant="outlined"

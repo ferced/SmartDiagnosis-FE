@@ -1,8 +1,9 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { Navigate, useRoutes } from 'react-router-dom';
 
-import { GuestGuard } from 'src/auth/guard';
-import AuthClassicLayout from 'src/layouts/auth/classic';
+import LandingLayout from 'src/layouts/landing';
+
+import { SplashScreen } from 'src/components/loading-screen';
 
 // import { PATH_AFTER_LOGIN } from 'src/config-global';
 import { authRoutes } from './auth';
@@ -11,26 +12,19 @@ import { dashboardRoutes } from './dashboard';
 
 // ----------------------------------------------------------------------
 
+const LandingPage = lazy(() => import('src/sections/landing/landing-view'));
+
 export default function Router() {
-  const JwtLoginPage = lazy(() => import('src/pages/auth/jwt/login'));
   return useRoutes([
-    // SET INDEX PAGE WITH SKIP HOME PAGE
-    // {
-    //   path: '/',
-    //   element: <Navigate to={PATH_AFTER_LOGIN} replace />,
-    // },
-
-    // ----------------------------------------------------------------------
-
-    // SET INDEX PAGE WITH HOME PAGE
+    // Landing page as index
     {
       path: '/',
       element: (
-        <GuestGuard>
-          <AuthClassicLayout>
-            <JwtLoginPage />
-          </AuthClassicLayout>
-        </GuestGuard>
+        <LandingLayout>
+          <Suspense fallback={<SplashScreen />}>
+            <LandingPage />
+          </Suspense>
+        </LandingLayout>
       ),
     },
 

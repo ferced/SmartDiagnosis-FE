@@ -42,7 +42,12 @@ interface RareDisease {
 
 interface RareDiseasePanelProps {
   rareDiseases: RareDisease[];
-  onTestSubmit: (decision: string, action: any, rareDiseaseId: string) => void;
+  onTestSubmit: (
+    decision: string,
+    action: any,
+    rareDiseaseId: string,
+    completedTests?: { name: string; result: string }[]
+  ) => void;
   patientInfo: any;
   currentDiagnoses: any;
   conversationId: number;
@@ -129,10 +134,18 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
 
       const { decision, action } = response.data;
 
+      // Surface the tests the clinician actually ran (with results) so the
+      // parent can feed them back to the engine as authoritative case state.
+      const performedTests = selectedTests.map((t) => ({
+        name: t,
+        result: testResults[t] || '',
+      }));
+
       onTestSubmit(
         decision,
         action,
-        selectedDisease.diagnosis
+        selectedDisease.diagnosis,
+        performedTests
       );
 
       setShowTestDialog(false);
@@ -248,7 +261,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
 
                         <Box>
                           <Typography variant="body2" fontWeight="bold" gutterBottom>
-                            Are any of these symptoms present in the patient?
+                            Are all of these symptoms present in the patient?
                           </Typography>
                           <Stack direction="row" spacing={1}>
                             <Button
