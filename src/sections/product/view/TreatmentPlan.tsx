@@ -19,16 +19,12 @@ function parseSections(md: string): Section[] {
   let current: Section | null = null;
 
   const isHeading = (line: string): string | null => {
-    // Major markdown heading (1–2 hashes only — deeper levels stay as body so we
-    // don't over-split into dozens of tiny sections).
+    // Split ONLY on level-1/2 markdown headings (the major sections the model is
+    // instructed to emit). Deeper headings (###), numbered sub-steps and bullets
+    // stay inside their parent section's body so we get a handful of meaningful
+    // accordions instead of dozens of tiny ones.
     const hashed = line.match(/^\s{0,3}#{1,2}\s+(.+\S)\s*$/);
     if (hashed) return hashed[1];
-    // Top-level numbered section, possibly prefixed by hashes or bold:
-    // "3. Acute Relapse Management", "### 3. ...", "**3. ...**"
-    const numbered = line.match(
-      /^\s*#{0,3}\s*\*{0,2}\s*([0-9]{1,2}[.)])\s+([A-Z][^*\n]{3,80}?)\*{0,2}\s*$/
-    );
-    if (numbered) return `${numbered[1]} ${numbered[2]}`.trim();
     return null;
   };
 
