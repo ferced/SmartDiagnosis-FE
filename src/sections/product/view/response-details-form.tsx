@@ -6,6 +6,7 @@ import {
   Healing,
   BarChart,
   Assignment,
+  WarningAmber,
   NavigateNext,
   NavigateBefore,
   CheckCircleOutline,
@@ -93,13 +94,19 @@ export default function ResponseDetails({
   const {
     diagnosesData,
     disclaimer,
-    follow_up_questions
+    follow_up_questions,
+    abstained,
+    abstentionReason,
+    topConfidence,
   } = useMemo(() => {
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return {
       diagnosesData: diagnoses.common_diagnoses || [],
       disclaimer: diagnoses.disclaimer || '',
       follow_up_questions: diagnoses.follow_up_questions || [],
+      abstained: Boolean(diagnoses.abstained),
+      abstentionReason: diagnoses.abstention_reason || '',
+      topConfidence: diagnoses.top_confidence || '',
     };
   }, [responseDetails]);
 
@@ -134,7 +141,8 @@ export default function ResponseDetails({
   // path that returns the complete prose plan) and surface it on the main view,
   // instead of forcing the clinician to re-query it in the free-text ChatBox.
   useEffect(() => {
-    if (!finalDiagnosis || finalNarrative || narrativeLoading) return;
+    // Don't compile a confident consolidated plan when the engine abstained.
+    if (!finalDiagnosis || abstained || finalNarrative || narrativeLoading) return;
 
     const fetchFinalNarrative = async () => {
       const token = sessionStorage.getItem('accessToken');
@@ -451,6 +459,18 @@ export default function ResponseDetails({
           </Button>
         </Box>
 
+        {abstained && (
+          <Alert severity="warning" icon={<WarningAmber />} sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              GMIS abstained — confidence below threshold
+            </Typography>
+            <Typography variant="body2">
+              {abstentionReason ||
+                'The available evidence does not support a definitive diagnosis. The conditions below are considerations to investigate, not a conclusion.'}
+            </Typography>
+          </Alert>
+        )}
+
         {/* MUI Stepper */}
         <Stepper nonLinear activeStep={activeStep} sx={{ mb: 4 }}>
           {displayDiagnoses.map((_: any, idx: number) => (
@@ -473,7 +493,14 @@ export default function ResponseDetails({
         </Stepper>
 
         <Box sx={{ mt: 2 }}>
-          {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => (
+          {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => {
+            const confirmed = (finalDiagnosis || details.testConfirmed) && !abstained;
+            const headerColor = abstained
+              ? theme.palette.warning.dark
+              : confirmed
+                ? theme.palette.success.dark
+                : theme.palette.info.dark;
+            return (
             <div
               key={idx}
               style={{
@@ -487,27 +514,33 @@ export default function ResponseDetails({
                     maxWidth: '100%',
                     mx: 'auto',
                     bgcolor: theme.palette.background.paper,
-                    boxShadow: (finalDiagnosis || details.testConfirmed)
+                    boxShadow: confirmed
                       ? theme.customShadows?.success || '0px 8px 32px rgba(0, 137, 123, 0.2)'
                       : theme.customShadows?.card || '0px 4px 20px rgba(0, 0, 0, 0.1)',
                     borderRadius: '8px',
                     transition: 'all 0.5s ease-in-out',
-                    transform: (finalDiagnosis || details.testConfirmed) ? 'scale(1.02)' : 'scale(1)',
-                    border: (finalDiagnosis || details.testConfirmed) ? `2px solid ${theme.palette.success.dark}` : 'none',
+                    transform: confirmed ? 'scale(1.02)' : 'scale(1)',
+                    border: abstained
+                      ? `2px solid ${theme.palette.warning.main}`
+                      : confirmed
+                        ? `2px solid ${theme.palette.success.dark}`
+                        : 'none',
                   }}
                 >
                   <Box
                     sx={{
-                      backgroundColor: (finalDiagnosis || details.testConfirmed) ? theme.palette.success.dark : theme.palette.info.dark,
+                      backgroundColor: headerColor,
                       color: theme.palette.common.white,
                       p: 3,
                       textAlign: 'center',
                     }}
                   >
                     <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                      {(finalDiagnosis || details.testConfirmed) && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                      {confirmed && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                      {abstained && <WarningAmber sx={{ fontSize: 36 }} />}
                       <Typography variant="h4">
                         {(() => {
+                          if (abstained) return 'Abstained — Confidence Below Threshold';
                           if (details.testConfirmed) return 'Test-confirmed Diagnosis';
                           if (finalDiagnosis) return 'Confirmed Diagnosis';
                           return `Diagnosis Result ${idx + 1}`;
@@ -520,7 +553,7 @@ export default function ResponseDetails({
                     {/* Diagnosis */}
                     <Box display="flex" alignItems="center" my={2}>
                       <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-                      <Typography variant="h6">Diagnosis</Typography>
+                      <Typography variant="h6">{abstained ? 'Leading consideration' : 'Diagnosis'}</Typography>
                     </Box>
                     <Typography paragraph sx={{ ml: 4 }}>
                       {details.diagnosis}
@@ -535,10 +568,20 @@ export default function ResponseDetails({
                     </Box>
                     <Box sx={{ ml: 4 }}>
                       <Typography paragraph>
-                        {finalDiagnosis ? 'High' : details.probability}
+                        {abstained
+                          ? topConfidence || details.probability
+                          : finalDiagnosis
+                            ? 'High'
+                            : details.probability}
                       </Typography>
                       {(() => {
-                        const percent = getProbabilityPercent(finalDiagnosis ? 'High' : details.probability);
+                        const percent = getProbabilityPercent(
+                          abstained
+                            ? topConfidence || details.probability
+                            : finalDiagnosis
+                              ? 'High'
+                              : details.probability
+                        );
                         const barColor = getProbabilityColor(percent);
                         return (
                           <LinearProgress
@@ -556,7 +599,9 @@ export default function ResponseDetails({
                     {/* Treatment with Markdown */}
                     <Box display="flex" alignItems="center" my={2}>
                       <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-                      <Typography variant="h6">Treatment</Typography>
+                      <Typography variant="h6">
+                        {abstained ? 'Recommended workup & considerations' : 'Treatment'}
+                      </Typography>
                     </Box>
                     <Box sx={{ ml: 4 }}>
                       {finalDiagnosis && narrativeLoading && !finalNarrative ? (
@@ -576,16 +621,17 @@ export default function ResponseDetails({
                 </Card>
               </m.div>
             </div>
-          ))}
+          );
+          })}
 
-          {finalDiagnosis && (
+          {finalDiagnosis && !abstained && (
             <Alert severity="success" sx={{ mt: 2 }}>
               Final diagnosis reached: The system has determined this is the most probable diagnosis
               based on the provided information after 3 rounds of follow-up questions.
             </Alert>
           )}
 
-          {displayDiagnoses.length === 1 && !finalDiagnosis && (
+          {displayDiagnoses.length === 1 && !finalDiagnosis && !abstained && (
             <Alert severity="success" sx={{ mt: 2 }}>
               Final diagnosis reached: The system has determined this is the most probable diagnosis
               based on the provided information. No further follow-up questions needed.
