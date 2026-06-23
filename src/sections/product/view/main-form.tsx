@@ -173,15 +173,19 @@ export default function MainForm({
         </Grid>
       </Grid>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+      <Stack spacing={2.5} sx={{ mt: 4, alignItems: 'center' }}>
         <Button
           type="submit"
           variant="contained"
           color="primary"
+          size="large"
           disabled={isLoading}
           sx={{
             borderRadius: 2,
-            padding: '10px 30px',
+            px: 6,
+            py: 1.5,
+            minWidth: 320,
+            fontSize: '1rem',
             boxShadow: theme.customShadows?.primary || '0 3px 5px 2px rgba(105, 140, 255, .3)',
             ':hover': { boxShadow: theme.customShadows?.primary || '0 5px 7px 3px rgba(105, 140, 255, .4)' },
             textTransform: 'none',
@@ -191,36 +195,38 @@ export default function MainForm({
           {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit Patient Information'}
         </Button>
 
-        {import.meta.env.DEV && (
-          <>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleAutoFill}
-              sx={{
-                borderRadius: 2,
-                padding: '10px 30px',
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
-            >
-              Auto Fill & Submit
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              onClick={handleRareDiseaseAutoFill}
-              sx={{
-                borderRadius: 2,
-                padding: '10px 30px',
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
-            >
-              Rare Disease Auto Fill & Submit
-            </Button>
-          </>
-        )}
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+          flexWrap="wrap"
+          justifyContent="center"
+          sx={{ rowGap: 1 }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            Or load a sample case:
+          </Typography>
+          <Button
+            variant="outlined"
+            color="secondary"
+            size="small"
+            onClick={handleAutoFill}
+            disabled={isLoading}
+            sx={{ borderRadius: 5, textTransform: 'none', px: 2 }}
+          >
+            Normal case
+          </Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            size="small"
+            onClick={handleRareDiseaseAutoFill}
+            disabled={isLoading}
+            sx={{ borderRadius: 5, textTransform: 'none', px: 2 }}
+          >
+            Rare disease case
+          </Button>
+        </Stack>
       </Stack>
     </>
   );
