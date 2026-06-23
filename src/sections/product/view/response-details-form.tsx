@@ -495,11 +495,15 @@ export default function ResponseDetails({
         <Box sx={{ mt: 2 }}>
           {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => {
             const confirmed = (finalDiagnosis || details.testConfirmed) && !abstained;
-            const headerColor = abstained
-              ? theme.palette.warning.dark
-              : confirmed
-                ? theme.palette.success.dark
-                : theme.palette.info.dark;
+            let headerColor = theme.palette.info.dark;
+            if (abstained) headerColor = theme.palette.warning.dark;
+            else if (confirmed) headerColor = theme.palette.success.dark;
+            let cardBorder = 'none';
+            if (abstained) cardBorder = `2px solid ${theme.palette.warning.main}`;
+            else if (confirmed) cardBorder = `2px solid ${theme.palette.success.dark}`;
+            let probabilityLabel = details.probability;
+            if (abstained) probabilityLabel = topConfidence || details.probability;
+            else if (finalDiagnosis) probabilityLabel = 'High';
             return (
             <div
               key={idx}
@@ -520,11 +524,7 @@ export default function ResponseDetails({
                     borderRadius: '8px',
                     transition: 'all 0.5s ease-in-out',
                     transform: confirmed ? 'scale(1.02)' : 'scale(1)',
-                    border: abstained
-                      ? `2px solid ${theme.palette.warning.main}`
-                      : confirmed
-                        ? `2px solid ${theme.palette.success.dark}`
-                        : 'none',
+                    border: cardBorder,
                   }}
                 >
                   <Box
@@ -567,21 +567,9 @@ export default function ResponseDetails({
                       <Typography variant="h6">Probability</Typography>
                     </Box>
                     <Box sx={{ ml: 4 }}>
-                      <Typography paragraph>
-                        {abstained
-                          ? topConfidence || details.probability
-                          : finalDiagnosis
-                            ? 'High'
-                            : details.probability}
-                      </Typography>
+                      <Typography paragraph>{probabilityLabel}</Typography>
                       {(() => {
-                        const percent = getProbabilityPercent(
-                          abstained
-                            ? topConfidence || details.probability
-                            : finalDiagnosis
-                              ? 'High'
-                              : details.probability
-                        );
+                        const percent = getProbabilityPercent(probabilityLabel);
                         const barColor = getProbabilityColor(percent);
                         return (
                           <LinearProgress
