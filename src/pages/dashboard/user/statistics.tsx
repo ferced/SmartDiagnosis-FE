@@ -10,7 +10,7 @@ export default function UserStatisticsPage() {
   return (
     <>
       <Helmet>
-        <title>User Statistics - SmartDiagnosis</title>
+        <title>User Statistics - AI Professor</title>
       </Helmet>
 
       <RoleBasedGuard hasContent roles={['admin', 'manager']}>

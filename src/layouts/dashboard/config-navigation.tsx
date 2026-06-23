@@ -98,7 +98,7 @@ export function useNavData() {
       // MANAGEMENT
       // ----------------------------------------------------------------------
       {
-        subheader: t('SmartDiagnosis'),
+        subheader: t('AI Professor'),
         items: [
           // NEW DIAGNOSIS
           {

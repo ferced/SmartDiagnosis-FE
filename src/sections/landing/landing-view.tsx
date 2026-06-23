@@ -204,7 +204,7 @@ export default function LandingView() {
                     <Box
                       component="img"
                       src="/logo/logo_single.png"
-                      alt="SmartDiagnosis"
+                      alt="AI Professor"
                       sx={{ width: 52, height: 52, filter: 'brightness(0) invert(1)' }}
                     />
                     <Chip
@@ -452,7 +452,7 @@ export default function LandingView() {
                 Rigorous mathematical foundations
               </Typography>
               <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.7 }}>
-                SmartDiagnosis isn&apos;t a chatbot wrapper. It&apos;s a probabilistic reasoning engine built on decision-theoretic principles.
+                AI Professor isn&apos;t a chatbot wrapper. It&apos;s a probabilistic reasoning engine built on decision-theoretic principles.
               </Typography>
             </Stack>
           </m.div>
@@ -559,7 +559,7 @@ export default function LandingView() {
           <m.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={fadeIn} custom={0}>
             <Iconify icon="mdi:format-quote-open" width={48} sx={{ color: alpha(A, 0.4), mb: 3 }} />
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 4, lineHeight: 1.5, fontStyle: 'italic', opacity: 0.95 }}>
-              &ldquo;SmartDiagnosis caught a rare metabolic disorder in a patient I&apos;d been treating
+              &ldquo;AI Professor caught a rare metabolic disorder in a patient I&apos;d been treating
               for months. The confidence calibration told me exactly which test to run. It changed
               that patient&apos;s life.&rdquo;
             </Typography>
@@ -573,7 +573,7 @@ export default function LandingView() {
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: '#FAFBFC' }}>
         <Container maxWidth="sm" sx={{ textAlign: 'center' }}>
           <m.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={scaleIn} custom={0}>
-            <Box component="img" src="/logo/logo_single.png" alt="SmartDiagnosis" sx={{ width: 64, height: 64, mb: 3, mx: 'auto' }} />
+            <Box component="img" src="/logo/logo_single.png" alt="AI Professor" sx={{ width: 64, height: 64, mb: 3, mx: 'auto' }} />
             <Typography variant="h3" sx={{ fontWeight: 900, mb: 2, color: P, letterSpacing: '-0.02em' }}>
               Ready to diagnose smarter?
             </Typography>

@@ -10,7 +10,7 @@ export default function UserListPage() {
   return (
     <>
       <Helmet>
-        <title>User Management - SmartDiagnosis</title>
+        <title>User Management - AI Professor</title>
       </Helmet>
 
       <RoleBasedGuard hasContent roles={['admin', 'manager']}>

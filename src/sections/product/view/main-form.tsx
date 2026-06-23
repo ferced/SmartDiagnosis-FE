@@ -1,10 +1,8 @@
 import { Controller } from 'react-hook-form';
 
-import { Settings, AutoAwesome } from '@mui/icons-material';
 import {
   Box,
   Card,
-  Chip,
   Grid,
   Stack,
   Button,
@@ -170,44 +168,6 @@ export default function MainForm({
                 </Grid>
               </Grid>
 
-              {/* AI Model Configuration - inline */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  p: 2,
-                  borderRadius: 1,
-                  bgcolor: 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <AutoAwesome sx={{ color: 'primary.main', fontSize: 20 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    AI Model:
-                  </Typography>
-                  <Chip
-                    label={openAIConfig ? openAIConfig.model : 'GPT-5.5 (Default)'}
-                    color={openAIConfig ? 'primary' : 'default'}
-                    size="small"
-                  />
-                  {openAIConfig && (
-                    <Typography variant="caption" color="text.disabled">
-                      Key: ••••{openAIConfig.apiKey.slice(-4)}
-                    </Typography>
-                  )}
-                </Box>
-                <Button
-                  variant="outlined"
-                  startIcon={<Settings />}
-                  onClick={onOpenAIConfigClick}
-                  size="small"
-                >
-                  Configure
-                </Button>
-              </Box>
             </Stack>
           </Card>
         </Grid>

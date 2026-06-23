@@ -8,7 +8,7 @@ export default function UserCreatePage() {
   return (
     <>
       <Helmet>
-        <title>Create User - SmartDiagnosis</title>
+        <title>Create User - AI Professor</title>
       </Helmet>
 
       <UserCreateView />

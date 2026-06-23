@@ -57,7 +57,7 @@ export default function LandingLayout({ children }: Props) {
               <Box
                 component="img"
                 src="/logo/logo_single.png"
-                alt="SmartDiagnosis"
+                alt="AI Professor"
                 sx={{
                   width: 40,
                   height: 40,

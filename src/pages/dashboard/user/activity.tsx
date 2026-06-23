@@ -10,7 +10,7 @@ export default function ActivityLogsPage() {
   return (
     <>
       <Helmet>
-        <title>Activity Logs - SmartDiagnosis</title>
+        <title>Activity Logs - AI Professor</title>
       </Helmet>
 
       <RoleBasedGuard hasContent roles={['admin', 'manager']}>
