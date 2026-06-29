@@ -107,6 +107,13 @@ export function useNavData() {
             icon: ICONS.chat,
           },
 
+          // HOW IT WORKS
+          {
+            title: 'How it works',
+            path: paths.dashboard.howItWorks,
+            icon: ICONS.analytics,
+          },
+
           // HISTORY
           {
             title: 'History',

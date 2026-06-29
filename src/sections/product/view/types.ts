@@ -2,6 +2,34 @@ export interface EvidenceLink {
   title: string;
   source: string;
   description: string;
+  // populated when the citation was grounded against a real PubMed record
+  pmid?: string;
+  url?: string;
+  verified?: boolean;
+}
+
+// Verdict of the symbolic verification layer for a single differential.
+export interface SymbolicVerdict {
+  status: 'ok' | 'blocked';
+  rule?: string;
+  reason?: string;
+}
+
+// A second, independent model's review of a single differential.
+export interface IndependentVerdict {
+  agree: boolean;
+  confidence?: 'high' | 'medium' | 'low' | string;
+  note?: string;
+  model?: string;
+}
+
+// A free-text symptom mapped to a standardized ontology concept (e.g. HPO).
+export interface ClinicalConcept {
+  input: string;
+  code: string;
+  name: string;
+  system: string;
+  url?: string;
 }
 
 export interface DrugInteraction {
@@ -48,6 +76,9 @@ export interface DiagnosisDetail {
   evidence_links?: EvidenceLink[];
   drug_interactions?: DrugInteraction[];
   missing_information?: MissingInfo[];
+  // neurosymbolic pipeline annotations
+  symbolic_check?: SymbolicVerdict;
+  independent_check?: IndependentVerdict;
 }
 
 export interface DiagnosisData {
@@ -55,6 +86,14 @@ export interface DiagnosisData {
   common_diagnoses: DiagnosisDetail[];
   rare_diagnoses: DiagnosisDetail[] | null;
   follow_up_questions: string[];
+  // pipeline outputs (populated by the backend reasoning stages)
+  ruled_out?: DiagnosisDetail[];
+  normalized_concepts?: ClinicalConcept[];
+  evidence_grounded?: boolean;
+  independently_verified?: boolean;
+  abstained?: boolean;
+  abstention_reason?: string;
+  top_confidence?: string;
 }
 
 export interface ArchivedDiagnosis {

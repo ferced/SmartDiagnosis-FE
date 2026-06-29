@@ -102,6 +102,7 @@ export const paths = {
     chat: `${ROOTS.DASHBOARD}/chat`,
     fileManager: `${ROOTS.DASHBOARD}/file-manager`,
     patientTimeline: `${ROOTS.DASHBOARD}/patient-timeline`,
+    howItWorks: `${ROOTS.DASHBOARD}/how-it-works`,
     history: {
       root: `${ROOTS.DASHBOARD}/history`,
       conversation: (id: number) => `${ROOTS.DASHBOARD}/history/conversation/${id}`,

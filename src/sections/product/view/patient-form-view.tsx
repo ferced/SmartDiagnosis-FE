@@ -182,6 +182,13 @@ export default function PatientForm() {
       });
 
       setResponseDetails(response.data);
+      // Persist the latest response so the "How it works" page can render the
+      // real reasoning chain (pipeline stages) for this case. Best-effort.
+      try {
+        sessionStorage.setItem('lastDiagnosisResponse', JSON.stringify(response.data));
+      } catch (e) {
+        /* storage may be unavailable (private mode / quota) — non-fatal */
+      }
       setActiveStep(0);
       setIsLoading(false);
       setResponseReceived(true);

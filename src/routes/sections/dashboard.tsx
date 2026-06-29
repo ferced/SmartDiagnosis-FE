@@ -14,6 +14,7 @@ const HistoryPage = lazy(() => import('src/pages/dashboard/history'));
 const ConversationPage = lazy(() => import('src/pages/dashboard/conversation'));
 const FileManagerPage = lazy(() => import('src/pages/dashboard/file-manager'));
 const PatientTimelinePage = lazy(() => import('src/pages/dashboard/patient-timeline'));
+const HowItWorksPage = lazy(() => import('src/pages/dashboard/how-it-works'));
 
 // USER MANAGEMENT PAGES
 const UserListPage = lazy(() => import('src/pages/dashboard/user/list'));
@@ -48,6 +49,7 @@ export const dashboardRoutes = [
       },
       { path: 'file-manager', element: <FileManagerPage /> },
       { path: 'patient-timeline', element: <PatientTimelinePage /> },
+      { path: 'how-it-works', element: <HowItWorksPage /> },
       {
         path: 'history', 
         children: [
