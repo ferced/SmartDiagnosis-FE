@@ -45,6 +45,18 @@ const SAMPLE: DiagnosisData = {
       evidence_links: [
         { title: '2021 ACR/VF Guideline for the Management of Giant Cell Arteritis', source: 'PubMed', description: 'Arthritis Rheumatol, 2021', pmid: '34235884', url: 'https://pubmed.ncbi.nlm.nih.gov/34235884/', verified: true },
       ],
+      drug_interactions: [
+        {
+          drug1: 'Prednisone',
+          drug2: 'Warfarin',
+          severity: 'moderate',
+          detail: 'Corticosteroids may potentiate the anticoagulant effect of warfarin — monitor INR.',
+          drug1_rxcui: '8640',
+          drug2_rxcui: '11289',
+          drugs_verified: true,
+          grounding_note: 'Both drugs verified against RxNorm.',
+        },
+      ],
     },
     {
       diagnosis: 'Polymyalgia rheumatica',
@@ -195,12 +207,16 @@ export default function HowItWorksView() {
     .flatMap((d) => (d.evidence_links || []).map((l) => ({ ...l, dx: d.diagnosis })))
     .filter((l) => l.verified);
   const independent = common.filter((d) => d.independent_check);
+  const drugChecks = common.flatMap((d) =>
+    (d.drug_interactions || []).map((di) => ({ ...di, dx: d.diagnosis }))
+  );
 
   const C = {
     neural: '#1b4965',
     symbolic: '#8957d6',
     independent: '#1f8a8a',
     evidence: '#3a6ee0',
+    drugs: '#0e8a6a',
     gate: '#c98a14',
   };
 
@@ -220,8 +236,8 @@ export default function HowItWorksView() {
           Esta página descompone la <b>cadena de razonamiento real</b> de un diagnóstico, etapa por
           etapa. El modelo neuronal <b>propone</b>; las capas simbólica e independiente{' '}
           <b>verifican</b>; la evidencia se <b>ancla a PubMed</b>; los síntomas se{' '}
-          <b>normalizan a conceptos estándar (HPO)</b>; y el confidence gate <b>se abstiene</b> antes
-          que adivinar. Nada de caja negra.
+          <b>normalizan a conceptos estándar (HPO)</b>; los fármacos se <b>verifican contra RxNorm</b>;
+          y el confidence gate <b>se abstiene</b> antes que adivinar. Nada de caja negra.
         </Typography>
 
         <ToggleButtonGroup
@@ -395,9 +411,58 @@ export default function HowItWorksView() {
           )}
         </Stage>
 
-        {/* Stage 5 — Confidence gate + ranked output */}
+        {/* Stage 5 — Drug grounding (RxNorm) */}
         <Stage
           index={5}
+          title="Verificación de fármacos (RxNorm)"
+          subtitle="Cada fármaco nombrado en una interacción se resuelve a un concepto real de RxNorm (NIH). Un fármaco que no resuelve se marca como no verificado (posible alucinación), en vez de presentarse como un hecho."
+          color={C.drugs}
+          ran={drugChecks.length > 0}
+        >
+          {drugChecks.length ? (
+            <Stack spacing={1.5}>
+              {drugChecks.map((di, idx) => (
+                <Box
+                  key={`${di.drug1}-${di.drug2}-${idx}`}
+                  sx={{ p: 1.5, borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                    <Chip
+                      size="small"
+                      variant="soft"
+                      color={di.drugs_verified ? 'success' : 'warning'}
+                      label={di.drugs_verified ? '✓ Fármacos verificados (RxNorm)' : '⚠ Sin verificar'}
+                    />
+                    <Typography variant="subtitle2">
+                      {di.drug1} ⇄ {di.drug2}
+                    </Typography>
+                    {di.severity && (
+                      <Chip size="small" variant="outlined" label={`severidad: ${di.severity}`} />
+                    )}
+                  </Stack>
+                  {di.detail && (
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                      {di.detail}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.disabled">
+                    {[di.drug1_rxcui && `${di.drug1} → RxCUI ${di.drug1_rxcui}`, di.drug2_rxcui && `${di.drug2} → RxCUI ${di.drug2_rxcui}`]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.disabled">
+              Esta respuesta no reportó interacciones de fármacos para verificar.
+            </Typography>
+          )}
+        </Stage>
+
+        {/* Stage 6 — Confidence gate + ranked output */}
+        <Stage
+          index={6}
           title="Confidence gate y salida"
           subtitle="Si la confianza es baja o los diferenciales son indistinguibles, el sistema se abstiene en vez de adivinar. Si no, entrega el diferencial rankeado."
           color={C.gate}

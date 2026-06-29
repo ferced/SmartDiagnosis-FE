@@ -37,6 +37,11 @@ export interface DrugInteraction {
   drug2: string;
   severity: 'high' | 'moderate' | 'low';
   detail: string;
+  // drug grounding against RxNorm (NIH): each drug resolved to a real concept
+  drug1_rxcui?: string;
+  drug2_rxcui?: string;
+  drugs_verified?: boolean;
+  grounding_note?: string;
 }
 
 export interface MissingInfo {
