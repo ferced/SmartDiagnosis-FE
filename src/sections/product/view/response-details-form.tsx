@@ -3,17 +3,20 @@ import { m } from 'framer-motion';
 import { useMemo, useState, useEffect } from 'react';
 
 import {
+  Science,
   Healing,
   BarChart,
   Assignment,
   WarningAmber,
   NavigateNext,
+  CompareArrows,
   NavigateBefore,
   CheckCircleOutline,
 } from '@mui/icons-material';
 import {
   Box,
   Card,
+  Chip,
   Grid,
   Step,
   Alert,
@@ -35,6 +38,7 @@ import { varFade } from 'src/components/animate';
 
 import TreatmentPlan from './TreatmentPlan';
 import RareDiseasePanel from './RareDiseasePanel';
+import ConfidenceCalibration from './ConfidenceCalibration';
 import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
 import { DiagnosisDetail, ArchivedDiagnosis, ResponseDetailsProps } from './types';
@@ -98,6 +102,9 @@ export default function ResponseDetails({
     abstained,
     abstentionReason,
     topConfidence,
+    workupFirst,
+    workupReason,
+    recommendedWorkup,
   } = useMemo(() => {
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return {
@@ -107,6 +114,11 @@ export default function ResponseDetails({
       abstained: Boolean(diagnoses.abstained),
       abstentionReason: diagnoses.abstention_reason || '',
       topConfidence: diagnoses.top_confidence || '',
+      // Evidence gate: the leading differential rests on a finding that was
+      // never obtained, so the workup is the deliverable, not the diagnosis.
+      workupFirst: Boolean(diagnoses.workup_first),
+      workupReason: diagnoses.workup_reason || '',
+      recommendedWorkup: (diagnoses.recommended_workup || []) as string[],
     };
   }, [responseDetails]);
 
@@ -238,6 +250,9 @@ export default function ResponseDetails({
           allergies: originalPatientInfo.allergies || '',
           currentMedications: originalPatientInfo.currentMedications || '',
           ...(completedTests.length > 0 && { completedTests }),
+          // How many rounds of history-taking have already run. The engine uses
+          // it to stop asking and commit to a workup instead of looping.
+          historyRounds: followUpCounter,
           ...(openAIConfig && { openaiConfig: openAIConfig }),
         },
         initialResponse: {
@@ -459,6 +474,30 @@ export default function ResponseDetails({
           </Button>
         </Box>
 
+        {workupFirst && (
+          <Alert severity="info" icon={<Science />} sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Workup first — the leading differential is not yet confirmable
+            </Typography>
+            <Typography variant="body2">
+              {workupReason ||
+                'The leading differential depends on a finding that has not been obtained for this patient.'}
+            </Typography>
+            {recommendedWorkup.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                  Outstanding investigations:
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                  {recommendedWorkup.map((test: string, idx: number) => (
+                    <Chip key={idx} label={test} size="small" color="info" variant="outlined" />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </Alert>
+        )}
+
         {abstained && (
           <Alert severity="warning" icon={<WarningAmber />} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
@@ -559,6 +598,33 @@ export default function ResponseDetails({
                       {details.diagnosis}
                     </Typography>
 
+                    {details.provisional && (
+                      <Alert severity="warning" icon={<Science />} sx={{ ml: 4, mb: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                          Provisional — depends on a finding not yet obtained
+                        </Typography>
+                        <Typography variant="body2">
+                          {details.provisional_reason ||
+                            'This differential rests on a result that is not in the record.'}
+                        </Typography>
+                        {details.pending_confirmations && details.pending_confirmations.length > 0 && (
+                          <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2.5 }}>
+                            {details.pending_confirmations
+                              .filter((pc) => !pc.resolved)
+                              .map((pc, pcIdx) => (
+                                <li key={pcIdx}>
+                                  <Typography variant="body2">
+                                    <strong>{pc.finding}</strong> — confirm with{' '}
+                                    <strong>{pc.test}</strong>
+                                    {pc.if_absent ? `. ${pc.if_absent}` : ''}
+                                  </Typography>
+                                </li>
+                              ))}
+                          </Box>
+                        )}
+                      </Alert>
+                    )}
+
                     <Divider sx={{ my: 2 }} />
 
                     {/* Probability with bar */}
@@ -605,6 +671,86 @@ export default function ResponseDetails({
                         />
                       )}
                     </Box>
+
+                    {/* The rejected alternative is the product: asserting the
+                        right answer is worth less than showing the discrimination
+                        that produced it. */}
+                    {details.considered_alternatives &&
+                      details.considered_alternatives.length > 0 && (
+                        <>
+                          <Divider sx={{ my: 2 }} />
+                          <Box display="flex" alignItems="center" my={2}>
+                            <CompareArrows sx={{ color: theme.palette.info.main, mr: 2 }} />
+                            <Typography variant="h6">Alternatives considered</Typography>
+                          </Box>
+                          <Stack spacing={1.5} sx={{ ml: 4 }}>
+                            {details.considered_alternatives.map((alt, altIdx) => (
+                              <Box key={altIdx}>
+                                <Typography variant="subtitle2">{alt.diagnosis}</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {alt.discriminator}
+                                </Typography>
+                                {alt.missing_features && alt.missing_features.length > 0 && (
+                                  <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                                    {alt.missing_features.map((f, fIdx) => (
+                                      <Chip
+                                        key={fIdx}
+                                        label={`absent: ${f}`}
+                                        size="small"
+                                        variant="outlined"
+                                      />
+                                    ))}
+                                  </Stack>
+                                )}
+                              </Box>
+                            ))}
+                          </Stack>
+                        </>
+                      )}
+
+                    {/* Where recognized bodies disagree, say so rather than
+                        presenting one side of a live controversy as consensus. */}
+                    {details.guideline_basis && details.guideline_basis.length > 0 && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box display="flex" alignItems="center" my={2}>
+                          <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+                          <Typography variant="h6">Guideline basis</Typography>
+                        </Box>
+                        <Stack spacing={1} sx={{ ml: 4 }}>
+                          {details.guideline_basis.map((g, gIdx) => (
+                            <Box key={gIdx}>
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Chip
+                                  label={g.year ? `${g.body} ${g.year}` : g.body}
+                                  size="small"
+                                  color={g.contested ? 'warning' : 'default'}
+                                />
+                                {g.contested && (
+                                  <Chip label="contested" size="small" color="warning" variant="outlined" />
+                                )}
+                              </Box>
+                              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                {g.statement}
+                              </Typography>
+                              {g.contested && g.contested_note && (
+                                <Typography variant="caption" color="warning.dark">
+                                  {g.contested_note}
+                                </Typography>
+                              )}
+                            </Box>
+                          ))}
+                        </Stack>
+                      </>
+                    )}
+
+                    {/* What would most raise confidence, surfaced as its own
+                        block rather than buried in the monitoring section. */}
+                    {details.missing_information && details.missing_information.length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <ConfidenceCalibration missingInformation={details.missing_information} />
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </m.div>
