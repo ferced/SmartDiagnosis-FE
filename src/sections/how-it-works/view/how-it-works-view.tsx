@@ -40,6 +40,32 @@ const SAMPLE: DiagnosisData = {
       probability: 'High (~70%)',
       discriminatorSymptoms: ['Jaw claudication', 'Scalp tenderness', 'Elevated ESR/CRP'],
       recommendedTests: ['ESR', 'CRP', 'Temporal artery ultrasound/biopsy'],
+      pending_confirmations: [
+        {
+          finding: 'Elevated inflammatory markers',
+          test: 'ESR/CRP',
+          resolved: true,
+          resolved_by: 'ESR/CRP',
+          if_absent: 'Normal inflammatory markers would make GCA very unlikely.',
+        },
+      ],
+      considered_alternatives: [
+        {
+          diagnosis: 'Polymyalgia rheumatica alone',
+          discriminator:
+            'Jaw claudication and visual disturbance are cranial features PMR does not produce on its own.',
+          missing_features: ['Isolated girdle stiffness without cranial symptoms'],
+        },
+      ],
+      guideline_basis: [
+        {
+          body: 'ACR/VF',
+          year: '2021',
+          statement:
+            'Start high-dose glucocorticoids immediately on strong clinical suspicion; do not delay for biopsy.',
+          contested: false,
+        },
+      ],
       symbolic_check: { status: 'ok' },
       independent_check: { agree: true, confidence: 'high', note: 'Age >50, jaw claudication and raised inflammatory markers strongly fit.', model: 'gpt-4o' },
       evidence_links: [
@@ -460,9 +486,62 @@ export default function HowItWorksView() {
           )}
         </Stage>
 
-        {/* Stage 6 — Confidence gate + ranked output */}
+        {/* Stage 6 — Evidence gate (sufficiency) */}
         <Stage
           index={6}
+          title="Evidence gate — suficiencia"
+          subtitle="Ningún diferencial puede darse por cerrado mientras falte un hallazgo del que depende. Lo que quede pendiente lo deja provisional y topea la confianza, así el gate siguiente se abstiene en lugar de concluir sobre un valor que nadie midió."
+          color={C.symbolic}
+          ran
+        >
+          {data.workup_first ? (
+            <Alert severity="info" variant="outlined" sx={{ mb: 1.5 }}>
+              <b>Primero el workup.</b> {data.workup_reason}
+            </Alert>
+          ) : (
+            <Typography variant="body2" color="text.disabled" sx={{ mb: 1.5 }}>
+              Ningún diferencial quedó pendiente de un hallazgo sin obtener.
+            </Typography>
+          )}
+
+          {data.recommended_workup && data.recommended_workup.length > 0 && (
+            <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mb: 1.5 }}>
+              {data.recommended_workup.map((t: string) => (
+                <Chip key={t} label={t} size="small" variant="outlined" />
+              ))}
+            </Stack>
+          )}
+
+          <Stack spacing={1.25}>
+            {common
+              .filter((d: DiagnosisDetail) => d.pending_confirmations?.length || d.provisional)
+              .map((d: DiagnosisDetail) => (
+                <Box key={d.diagnosis}>
+                  <Typography variant="subtitle2">{d.diagnosis}</Typography>
+                  {d.provisional_reason && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {d.provisional_reason}
+                    </Typography>
+                  )}
+                  {d.pending_confirmations?.map((pc) => (
+                    <Typography
+                      key={pc.finding}
+                      variant="caption"
+                      display="block"
+                      color={pc.resolved ? 'text.secondary' : 'warning.dark'}
+                    >
+                      {pc.resolved ? '✓' : '•'} <b>{pc.finding}</b> — {pc.test}
+                      {pc.resolved ? ' (ya obtenido en el registro)' : ' (pendiente)'}
+                    </Typography>
+                  ))}
+                </Box>
+              ))}
+          </Stack>
+        </Stage>
+
+        {/* Stage 7 — Confidence gate + ranked output */}
+        <Stage
+          index={7}
           title="Confidence gate y salida"
           subtitle="Si la confianza es baja o los diferenciales son indistinguibles, el sistema se abstiene en vez de adivinar. Si no, entrega el diferencial rankeado."
           color={C.gate}

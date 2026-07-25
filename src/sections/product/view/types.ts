@@ -70,6 +70,35 @@ export interface PatientCaseEntry {
   created_at: string;
 }
 
+// A finding a differential DEPENDS ON that has not been obtained for this
+// patient. While one is unresolved the diagnosis stays provisional — the engine
+// does not commit to a conclusion resting on a value it was never given.
+export interface PendingConfirmation {
+  finding: string;
+  test: string;
+  if_absent?: string;
+  resolved?: boolean;
+  resolved_by?: string;
+}
+
+// A competing diagnosis actively weighed and set aside, with the feature of this
+// case that discriminates against it.
+export interface AlternativeConsidered {
+  diagnosis: string;
+  discriminator: string;
+  missing_features?: string[];
+}
+
+// A recommendation anchored to a named guideline body, flagging where bodies
+// genuinely disagree instead of presenting one side as settled consensus.
+export interface GuidelineRef {
+  body: string;
+  year?: string;
+  statement: string;
+  contested?: boolean;
+  contested_note?: string;
+}
+
 export interface DiagnosisDetail {
   diagnosis: string;
   treatment: string;
@@ -84,6 +113,16 @@ export interface DiagnosisDetail {
   // neurosymbolic pipeline annotations
   symbolic_check?: SymbolicVerdict;
   independent_check?: IndependentVerdict;
+  // evidence gate: what this differential still depends on
+  pending_confirmations?: PendingConfirmation[];
+  provisional?: boolean;
+  provisional_reason?: string;
+  // differential discipline: the alternatives weighed and why they were set aside
+  considered_alternatives?: AlternativeConsidered[];
+  guideline_basis?: GuidelineRef[];
+  // rare-candidate discrimination: what this condition predicts that is ABSENT
+  expectedButAbsent?: string[];
+  arguesAgainst?: string;
 }
 
 export interface DiagnosisData {
@@ -99,6 +138,11 @@ export interface DiagnosisData {
   abstained?: boolean;
   abstention_reason?: string;
   top_confidence?: string;
+  // evidence gate / history sufficiency
+  workup_first?: boolean;
+  workup_reason?: string;
+  recommended_workup?: string[];
+  history_sufficient?: boolean;
 }
 
 export interface ArchivedDiagnosis {

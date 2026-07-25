@@ -38,6 +38,11 @@ interface RareDisease {
   prevalence: string;
   discriminatorSymptoms?: string[];
   recommendedTests?: string[];
+  // A panel that lists only the features a candidate SHARES with the patient
+  // fires positive on every candidate. These two are what make it a screen
+  // rather than a confirmation engine.
+  expectedButAbsent?: string[];
+  arguesAgainst?: string;
 }
 
 interface RareDiseasePanelProps {
@@ -83,24 +88,11 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
     if (hasSymptoms) {
       const disease = rareDiseases.find(d => d.diagnosis === diseaseId);
       if (disease) {
-        const diseaseWithTests = {
-          ...disease,
-          recommendedTests: disease.recommendedTests && disease.recommendedTests.length > 0
-            ? disease.recommendedTests
-            : [
-                'Complete Blood Count (CBC)',
-                'Genetic Panel Testing',
-                'Specialized Biomarker Analysis'
-              ],
-          discriminatorSymptoms: disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0
-            ? disease.discriminatorSymptoms
-            : [
-                'Specific symptom that distinguishes this condition',
-                'Additional characteristic symptom',
-                'Key diagnostic feature'
-              ]
-        };
-        setSelectedDisease(diseaseWithTests);
+        // Show what the engine actually proposed. Filling empty arrays with
+        // invented placeholders ("Specific symptom that distinguishes this
+        // condition", "Genetic Panel Testing") put fabricated clinical content
+        // in front of a clinician and made an untested candidate look worked up.
+        setSelectedDisease(disease);
         setShowTestDialog(true);
       }
     }
@@ -247,7 +239,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
                         {disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0 && (
                           <Box>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                              Discriminator symptoms:
+                              Supporting features present in this patient:
                             </Typography>
                             <ul style={{ margin: 0, paddingLeft: 20 }}>
                               {disease.discriminatorSymptoms.map((symptom, idx) => (
@@ -259,9 +251,35 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
                           </Box>
                         )}
 
+                        {disease.expectedButAbsent && disease.expectedButAbsent.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Expected for this condition but absent here:
+                            </Typography>
+                            <ul style={{ margin: 0, paddingLeft: 20 }}>
+                              {disease.expectedButAbsent.map((feature, idx) => (
+                                <li key={idx}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {feature}
+                                  </Typography>
+                                </li>
+                              ))}
+                            </ul>
+                          </Box>
+                        )}
+
+                        {disease.arguesAgainst && (
+                          <Alert severity="info" icon={false} sx={{ py: 0.5 }}>
+                            <Typography variant="caption" fontWeight="bold">
+                              Argues against:{' '}
+                            </Typography>
+                            <Typography variant="caption">{disease.arguesAgainst}</Typography>
+                          </Alert>
+                        )}
+
                         <Box>
                           <Typography variant="body2" fontWeight="bold" gutterBottom>
-                            Are all of these symptoms present in the patient?
+                            Does this candidate warrant investigation?
                           </Typography>
                           <Stack direction="row" spacing={1}>
                             <Button
