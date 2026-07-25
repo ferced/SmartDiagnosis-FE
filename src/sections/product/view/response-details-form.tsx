@@ -38,9 +38,12 @@ import { varFade } from 'src/components/animate';
 
 import TreatmentPlan from './TreatmentPlan';
 import RareDiseasePanel from './RareDiseasePanel';
+import DrugInteractionAlert from './DrugInteractionAlert';
+import EvidenceLinksSection from './EvidenceLinksSection';
 import ConfidenceCalibration from './ConfidenceCalibration';
 import PreviousWorkingDiagnoses from './PreviousWorkingDiagnoses';
 import FollowUpModal from '../../../components/modals/FollowUpModal';
+import { probabilityColor, parseProbabilityPercent } from './probability';
 import { DiagnosisDetail, ArchivedDiagnosis, ResponseDetailsProps } from './types';
 
 interface OpenAIConfig {
@@ -48,21 +51,8 @@ interface OpenAIConfig {
   model: string;
 }
 
-const getProbabilityPercent = (probability: string): number => {
-  const match = probability.match(/(\d+)/);
-  if (match) return parseInt(match[1], 10);
-  const lower = probability.toLowerCase();
-  if (lower.includes('high') || lower.includes('very likely')) return 80;
-  if (lower.includes('moderate') || lower.includes('likely')) return 55;
-  if (lower.includes('low')) return 25;
-  return 50;
-};
-
-const getProbabilityColor = (percent: number): 'success' | 'warning' | 'error' => {
-  if (percent >= 70) return 'success';
-  if (percent >= 40) return 'warning';
-  return 'error';
-};
+// Probability parsing and colour now live in ./probability, shared with the
+// rare-disease panel so the same value cannot render two different ways.
 
 export default function ResponseDetails({
   responseDetails,
@@ -269,8 +259,14 @@ export default function ResponseDetails({
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
+      // The counter is only committed once the round actually succeeds. It used
+      // to be set before the request: that re-rendered immediately at 3, which
+      // fired the "final diagnosis" effect against the STALE pre-round-3 list —
+      // so for the 30-90s the request was in flight the page showed a confident
+      // conclusion for a diagnosis the engine had not converged on, and even
+      // compiled a full treatment narrative for it. A failed round also counted,
+      // permanently dead-ending the case on a conclusion that never happened.
       const newFollowUpCounter = followUpCounter + 1;
-      setFollowUpCounter(newFollowUpCounter);
 
       if (newFollowUpCounter === 3) {
         const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
@@ -314,6 +310,7 @@ export default function ResponseDetails({
         setResponseDetails(response.data);
       }
 
+      setFollowUpCounter(newFollowUpCounter);
       setFollowUpAnswers([]);
       setAdditionalInfo('');
       setIsLoading(false);
@@ -401,15 +398,30 @@ export default function ResponseDetails({
 
       setPreservedRareDiagnoses(updatedRareDiseases);
 
-      setResponseDetails((prev: any) => ({
-        ...prev,
-        diagnoses: {
-          ...prev.diagnoses,
-          rare_diagnoses: updatedRareDiseases,
-        }
-      }));
+      // After any follow-up round the response lives under `followUpResponse`
+      // and there is no `diagnoses` key. Spreading `prev.diagnoses` (undefined)
+      // produced a `diagnoses` object holding ONLY rare_diagnoses — no
+      // common_diagnoses, no disclaimer, no abstention — and since the reader
+      // prefers `diagnoses` over `followUpResponse`, ruling out one rare
+      // candidate erased every diagnosis card from the screen. The CONFIRM
+      // branch above already reads from either shape; this now matches it.
+      setResponseDetails((prev: any) => {
+        const prevDiagnoses = prev?.diagnoses || (prev as any)?.followUpResponse || {};
+        return {
+          ...prev,
+          diagnoses: {
+            ...prevDiagnoses,
+            rare_diagnoses: updatedRareDiseases,
+          },
+        };
+      });
     } else if (decision === 'INCONCLUSIVE') {
-      console.log('Test results were inconclusive. Additional testing may be required.');
+      // Previously a silent console.log: the dialog closed cleanly and nothing
+      // on screen changed, which is indistinguishable from the result having
+      // been applied.
+      setError(
+        'The test result was inconclusive for this condition — it was neither confirmed nor ruled out. Further testing may be required.'
+      );
     }
   };
 
@@ -533,16 +545,29 @@ export default function ResponseDetails({
 
         <Box sx={{ mt: 2 }}>
           {displayDiagnoses.map((details: DiagnosisDetail, idx: number) => {
-            const confirmed = (finalDiagnosis || details.testConfirmed) && !abstained;
+            // "Confirmed" must mean a test confirmed it. It previously also
+            // became true the moment three questionnaire rounds had elapsed, so
+            // the card claimed a confirmed diagnosis when nothing had been
+            // confirmed — no test, no result. Converging on one candidate is a
+            // WORKING diagnosis, which is a different and weaker claim.
+            const stillUnconfirmed = Boolean(details.provisional) || workupFirst || abstained;
+            const confirmed = Boolean(details.testConfirmed) && !stillUnconfirmed;
+            const working = Boolean(finalDiagnosis) && !confirmed && !stillUnconfirmed;
+
             let headerColor = theme.palette.info.dark;
             if (abstained) headerColor = theme.palette.warning.dark;
             else if (confirmed) headerColor = theme.palette.success.dark;
             let cardBorder = 'none';
             if (abstained) cardBorder = `2px solid ${theme.palette.warning.main}`;
             else if (confirmed) cardBorder = `2px solid ${theme.palette.success.dark}`;
-            let probabilityLabel = details.probability;
-            if (abstained) probabilityLabel = topConfidence || details.probability;
-            else if (finalDiagnosis) probabilityLabel = 'High';
+
+            // The probability shown is always the engine's own. It used to be
+            // overwritten with the literal string 'High' once a final diagnosis
+            // was picked, which then parsed to 80% and drew a green bar — while
+            // the PDF exported the real value, so screen and report disagreed.
+            const probabilityLabel = abstained
+              ? topConfidence || details.probability
+              : details.probability;
             return (
             <div
               key={idx}
@@ -580,8 +605,10 @@ export default function ResponseDetails({
                       <Typography variant="h4">
                         {(() => {
                           if (abstained) return 'Abstained — Confidence Below Threshold';
-                          if (details.testConfirmed) return 'Test-confirmed Diagnosis';
-                          if (finalDiagnosis) return 'Confirmed Diagnosis';
+                          if (details.provisional || workupFirst)
+                            return 'Provisional — Confirmatory Workup Pending';
+                          if (confirmed) return 'Test-confirmed Diagnosis';
+                          if (working) return 'Working Diagnosis';
                           return `Diagnosis Result ${idx + 1}`;
                         })()}
                       </Typography>
@@ -633,17 +660,28 @@ export default function ResponseDetails({
                       <Typography variant="h6">Probability</Typography>
                     </Box>
                     <Box sx={{ ml: 4 }}>
-                      <Typography paragraph>{probabilityLabel}</Typography>
                       {(() => {
-                        const percent = getProbabilityPercent(probabilityLabel);
-                        const barColor = getProbabilityColor(percent);
+                        const percent = parseProbabilityPercent(probabilityLabel);
+                        // An unreadable probability must not draw a bar. The old
+                        // code defaulted to 50%, so an empty string produced a
+                        // confident half-full bar with nothing behind it.
+                        if (percent === null) {
+                          return (
+                            <Typography paragraph color="text.secondary">
+                              {probabilityLabel || 'Not reported by the engine'}
+                            </Typography>
+                          );
+                        }
                         return (
-                          <LinearProgress
-                            variant="determinate"
-                            value={percent}
-                            color={barColor}
-                            sx={{ height: 8, borderRadius: 1, mb: 2 }}
-                          />
+                          <>
+                            <Typography paragraph>{probabilityLabel}</Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={percent}
+                              color={probabilityColor(percent)}
+                              sx={{ height: 8, borderRadius: 1, mb: 2 }}
+                            />
+                          </>
                         );
                       })()}
                     </Box>
@@ -671,6 +709,14 @@ export default function ResponseDetails({
                         />
                       )}
                     </Box>
+
+                    {/* Interactions belong immediately under the plan they are
+                        about — it is a safety alert on what was just proposed. */}
+                    {details.drug_interactions && details.drug_interactions.length > 0 && (
+                      <Box sx={{ ml: 4 }}>
+                        <DrugInteractionAlert drugInteractions={details.drug_interactions} />
+                      </Box>
+                    )}
 
                     {/* The rejected alternative is the product: asserting the
                         right answer is worth less than showing the discrimination
@@ -744,6 +790,14 @@ export default function ResponseDetails({
                       </>
                     )}
 
+                    {/* Citations grounded against real PubMed records, with the
+                        unverified ones marked as such. */}
+                    {details.evidence_links && details.evidence_links.length > 0 && (
+                      <Box sx={{ ml: 4 }}>
+                        <EvidenceLinksSection evidenceLinks={details.evidence_links} />
+                      </Box>
+                    )}
+
                     {/* What would most raise confidence, surfaced as its own
                         block rather than buried in the monitoring section. */}
                     {details.missing_information && details.missing_information.length > 0 && (
@@ -758,19 +812,37 @@ export default function ResponseDetails({
           );
           })}
 
-          {finalDiagnosis && !abstained && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              Final diagnosis reached: The system has determined this is the most probable diagnosis
-              based on the provided information after 3 rounds of follow-up questions.
-            </Alert>
-          )}
+          {/* A conclusion may only be announced when nothing is outstanding.
+              These banners used to fire alongside the abstention and
+              provisional warnings, so the same screen said both "the workup is
+              not confirmable yet" and "final diagnosis reached". They also
+              claimed "after 3 rounds of follow-up questions" on the path that
+              converges after one, stating a false provenance for the answer. */}
+          {(() => {
+            const outstanding =
+              abstained || workupFirst || displayDiagnoses.some((d: DiagnosisDetail) => d.provisional);
+            if (outstanding) return null;
 
-          {displayDiagnoses.length === 1 && !finalDiagnosis && !abstained && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              Final diagnosis reached: The system has determined this is the most probable diagnosis
-              based on the provided information. No further follow-up questions needed.
-            </Alert>
-          )}
+            if (finalDiagnosis) {
+              return (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  Working diagnosis reached after {followUpCounter}{' '}
+                  {followUpCounter === 1 ? 'round' : 'rounds'} of follow-up: this is the most
+                  probable diagnosis given the information provided.
+                </Alert>
+              );
+            }
+
+            if (displayDiagnoses.length === 1 && follow_up_questions.length === 0) {
+              return (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  A single differential remains and no further follow-up questions were proposed.
+                </Alert>
+              );
+            }
+
+            return null;
+          })()}
 
           <PreviousWorkingDiagnoses archivedDiagnoses={archivedDiagnoses} />
 

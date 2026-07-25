@@ -1,11 +1,8 @@
-import { Box, Card, Chip, LinearProgress, Stack, Typography } from '@mui/material';
+import { Box, Card, Chip, Stack, Typography, LinearProgress } from '@mui/material';
+
 import Iconify from 'src/components/iconify';
 
-interface MissingInfo {
-  test: string;
-  impact_estimate: string;
-  reasoning: string;
-}
+import { MissingInfo } from './types';
 
 interface Props {
   missingInformation: MissingInfo[];

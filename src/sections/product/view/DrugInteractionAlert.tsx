@@ -1,12 +1,8 @@
-import { Alert, AlertTitle, Box, Stack, Typography } from '@mui/material';
+import { Box, Chip, Alert, Stack, Tooltip, AlertTitle, Typography } from '@mui/material';
+
 import Iconify from 'src/components/iconify';
 
-interface DrugInteraction {
-  drug1: string;
-  drug2: string;
-  severity: 'high' | 'moderate' | 'low';
-  detail: string;
-}
+import { DrugInteraction } from './types';
 
 interface Props {
   drugInteractions: DrugInteraction[];
@@ -41,9 +37,51 @@ export default function DrugInteractionAlert({ drugInteractions }: Props) {
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 {interaction.drug1} + {interaction.drug2}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" display="block">
                 {interaction.detail}
               </Typography>
+
+              {/* Drug grounding. The wording is deliberate: RxNorm resolves the
+                  DRUGS, not the severity — RxNav's pairwise interaction API was
+                  retired in 2024 — so this must not read as "interaction verified".
+                  An interaction naming a drug that does not resolve is a likely
+                  model hallucination and has to be visible as such. */}
+              <Box sx={{ mt: 0.75 }}>
+                {interaction.drugs_verified ? (
+                  <Tooltip
+                    title={`Both drugs resolve to real RxNorm concepts${
+                      interaction.drug1_rxcui && interaction.drug2_rxcui
+                        ? ` (RxCUI ${interaction.drug1_rxcui} / ${interaction.drug2_rxcui})`
+                        : ''
+                    }. The severity above is the model's assessment, not an RxNorm verdict.`}
+                  >
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color="success"
+                      icon={<Iconify icon="mdi:check-decagram" width={16} />}
+                      label="Drugs verified in RxNorm"
+                      sx={{ height: 22, fontSize: '0.7rem' }}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Tooltip
+                    title={
+                      interaction.grounding_note ||
+                      'At least one drug named here did not resolve to a real RxNorm concept — treat this interaction as unverified.'
+                    }
+                  >
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      icon={<Iconify icon="mdi:help-circle-outline" width={16} />}
+                      label="Unverified drug name"
+                      sx={{ height: 22, fontSize: '0.7rem' }}
+                    />
+                  </Tooltip>
+                )}
+              </Box>
             </Alert>
           );
         })}

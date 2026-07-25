@@ -1,6 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 
+import { useTheme } from '@mui/material/styles';
 import {
   Close as CloseIcon,
   Biotech as BiotechIcon,
@@ -8,7 +9,6 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
@@ -31,19 +31,27 @@ import { HOST_API } from 'src/config-global';
 
 import Iconify from 'src/components/iconify';
 
-interface RareDisease {
-  diagnosis: string;
-  treatment: string;
-  probability: string;
-  prevalence: string;
-  discriminatorSymptoms?: string[];
-  recommendedTests?: string[];
-  // A panel that lists only the features a candidate SHARES with the patient
-  // fires positive on every candidate. These two are what make it a screen
-  // rather than a confirmation engine.
-  expectedButAbsent?: string[];
-  arguesAgainst?: string;
-}
+import { DiagnosisDetail } from './types';
+import { probabilityColor, parseProbabilityPercent } from './probability';
+
+// Mirrors the backend's rare-candidate shape. `prevalence` is optional there,
+// so it is optional here too — declaring it required only hid the case where it
+// is missing, it did not prevent it.
+//
+// The two disconfirming fields are what make this a screen rather than a
+// confirmation engine: a panel listing only the features a candidate SHARES
+// with the patient fires positive on every candidate.
+type RareDisease = Pick<
+  DiagnosisDetail,
+  | 'diagnosis'
+  | 'treatment'
+  | 'probability'
+  | 'prevalence'
+  | 'discriminatorSymptoms'
+  | 'recommendedTests'
+  | 'expectedButAbsent'
+  | 'arguesAgainst'
+>;
 
 interface RareDiseasePanelProps {
   rareDiseases: RareDisease[];
@@ -59,12 +67,12 @@ interface RareDiseasePanelProps {
   openAIConfig?: any;
 }
 
-const getProbabilityColor = (probability: string): 'error' | 'warning' | 'info' => {
-  const lower = probability.toLowerCase();
-  if (lower.includes('high') || lower.includes('likely')) return 'error';
-  if (lower.includes('moderate') || lower.includes('medium')) return 'warning';
-  return 'info';
-};
+// Colour comes from the shared scale so a probability reads the same here as on
+// the main card — this panel used to invert it (high = red) while the main card
+// used high = green, with both on screen at once. It also matched "unlikely"
+// via includes('likely') and gave explicitly-downgraded candidates the maximum
+// alarm accent, and returned a constant colour once the backend started
+// emitting numeric percentages.
 
 const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   rareDiseases,
@@ -80,6 +88,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   const [testResults, setTestResults] = useState<{ [key: string]: string }>({});
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [symptomsPresent, setSymptomsPresent] = useState<{ [key: string]: boolean }>({});
 
   const handleSymptomsResponse = (diseaseId: string, hasSymptoms: boolean) => {
@@ -102,6 +111,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
     if (!selectedDisease || selectedTests.length === 0 || Object.keys(testResults).length === 0) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const token = sessionStorage.getItem('accessToken');
       if (!token) {
@@ -145,7 +155,13 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
       setSelectedTests([]);
       setSelectedDisease(null);
     } catch (error) {
+      // A silent console.error left the dialog open with the button live and no
+      // explanation — the clinician could not tell a failed submission from a
+      // slow one.
       console.error('Error submitting test result:', error);
+      setSubmitError(
+        'The test result could not be submitted. Nothing was recorded — check the connection and try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -156,6 +172,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
     setTestResults({});
     setSelectedTests([]);
     setSelectedDisease(null);
+    setSubmitError(null);
   };
 
 
@@ -209,7 +226,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
           <Stack spacing={2}>
             {rareDiseases && rareDiseases.length > 0 ? (
               rareDiseases.map((disease, index) => {
-                const accentColor = getProbabilityColor(disease.probability);
+                const accentColor = probabilityColor(parseProbabilityPercent(disease.probability));
                 return (
                   <Card
                     key={index}
@@ -228,12 +245,17 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
                           <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                             {disease.diagnosis}
                           </Typography>
-                          <Chip
-                            label={`Prevalence: ${disease.prevalence}`}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                          />
+                          {/* prevalence is optional on the backend; interpolating
+                              it unguarded rendered "Prevalence: undefined" at the
+                              clinician. Say nothing rather than say that. */}
+                          {disease.prevalence && (
+                            <Chip
+                              label={`Prevalence: ${disease.prevalence}`}
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                            />
+                          )}
                         </Box>
 
                         {disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0 && (
@@ -322,12 +344,15 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
         </Box>
       </Card>
 
-      {/* Test Dialog */}
-      <Dialog open={showTestDialog} onClose={() => setShowTestDialog(false)} maxWidth="md" fullWidth>
+      {/* Test Dialog. Every close path must clear the selection: closing with
+          the X or the backdrop used to leave the previous disease's selected
+          tests and typed results in state, so reopening for a DIFFERENT disease
+          submitted that workup attributed to the new one. */}
+      <Dialog open={showTestDialog} onClose={handleSkipTest} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6">Test Recommendation</Typography>
-            <IconButton onClick={() => setShowTestDialog(false)} size="small">
+            <IconButton onClick={handleSkipTest} size="small">
               <CloseIcon />
             </IconButton>
           </Box>
@@ -335,10 +360,21 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
         <DialogContent>
           {selectedDisease && (
             <Stack spacing={3}>
-              <Alert severity="warning">
-                This symptom could point to <strong>{selectedDisease.diagnosis}</strong>.
-                The following tests are recommended. You can select one or more tests and provide results for each.
-              </Alert>
+              {submitError && <Alert severity="error">{submitError}</Alert>}
+
+              {selectedDisease.recommendedTests && selectedDisease.recommendedTests.length > 0 ? (
+                <Alert severity="warning">
+                  This could point to <strong>{selectedDisease.diagnosis}</strong>. Select one or
+                  more of the tests below and record the result for each.
+                </Alert>
+              ) : (
+                // Do not promise recommendations that were never returned.
+                <Alert severity="info">
+                  The engine did not propose a specific confirmatory test for{' '}
+                  <strong>{selectedDisease.diagnosis}</strong>. Nothing can be recorded here — refer
+                  to specialist guidance to choose the discriminating investigation.
+                </Alert>
+              )}
 
               {selectedDisease.recommendedTests && selectedDisease.recommendedTests.length > 0 && (
                 <Box>

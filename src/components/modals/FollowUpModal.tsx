@@ -41,7 +41,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
   return (
     <Dialog
       open={isOpen}
-      onClose={onClose}
+      onClose={isLoading ? undefined : onClose}
       maxWidth="sm"
       fullWidth
       aria-labelledby="follow-up-modal-title"
@@ -114,9 +114,13 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
       )}
 
       <DialogActions sx={{ px: 3, py: 2 }}>
+        {/* Cancel used to stay live during the request: closing mid-flight left
+            the round running, and it still landed — and counted — after the
+            modal was gone. */}
         <Button
           variant="outlined"
           onClick={onClose}
+          disabled={isLoading}
           sx={{
             fontSize: { xs: '0.8rem', sm: '1rem' },
             padding: { xs: '6px 12px', sm: '8px 16px' },
@@ -127,7 +131,10 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isLoading}
+          /* Submitting with nothing answered sent an empty string as the answer
+             to every clinical question, which the engine reads as an answer
+             rather than as "unknown". */
+          disabled={isLoading || answeredCount === 0}
           color="primary"
           sx={{
             fontSize: { xs: '0.8rem', sm: '1rem' },
