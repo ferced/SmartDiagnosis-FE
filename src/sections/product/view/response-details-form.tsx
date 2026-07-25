@@ -118,12 +118,20 @@ export default function ResponseDetails({
     return diagnoses.rare_diagnoses || null;
   }, [preservedRareDiagnoses, responseDetails]);
 
+  // The preserved copy exists so the panel does not vanish when a follow-up
+  // response omits rare_diagnoses. It was only ever written once, though, so it
+  // froze the candidates at round 0: after the clinician answered the questions
+  // — precisely the information that should prune the rare list — the panel kept
+  // showing the original candidates and the original discriminators, and those
+  // stale entries were what went into the PDF and back to the engine. Refresh
+  // whenever the new response actually carries a list; keep the old one only
+  // when it does not.
   useEffect(() => {
     const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
-    if (diagnoses.rare_diagnoses && diagnoses.rare_diagnoses.length > 0 && !preservedRareDiagnoses) {
+    if (diagnoses.rare_diagnoses && diagnoses.rare_diagnoses.length > 0) {
       setPreservedRareDiagnoses(diagnoses.rare_diagnoses);
     }
-  }, [responseDetails, preservedRareDiagnoses]);
+  }, [responseDetails]);
 
   useEffect(() => {
     if (finalDiagnosis || diagnosesData.length === 0) return;
@@ -294,7 +302,13 @@ export default function ResponseDetails({
 
           setResponseDetails(modifiedResponse);
         } else {
-          setResponseDetails(response.data);
+          // A malformed final round used to overwrite the whole case with a
+          // payload that carried no diagnoses, which unmounted the results view
+          // AND the chat and left no way back — three rounds of work gone.
+          // Keep what is on screen and report the failure instead.
+          throw new Error(
+            'The final round returned no diagnoses. Your previous results have been kept — please try again.'
+          );
         }
       } else {
         const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
