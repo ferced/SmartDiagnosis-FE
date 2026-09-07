@@ -11,7 +11,7 @@ import { RouterLink } from 'src/routes/components';
 import { Wordmark, LANDING as T } from './tokens';
 
 /**
- * Public landing of SmartDiagnosis.
+ * Public landing of AI Professor (aiprofessor.med; the product was formerly branded SmartDiagnosis).
  *
  * Every claim on this page maps to something the engine actually does today
  * (see the backend pipeline: symbolic verification, independent verifier,
@@ -335,7 +335,7 @@ export default function LandingView() {
               </m.div>
               <m.div initial="hidden" animate="visible" variants={rise} custom={2}>
                 <Body sx={{ maxWidth: 560, fontSize: { xs: 17, md: 19 }, mb: 4.5 }}>
-                  SmartDiagnosis turns a patient presentation into a ranked differential with
+                  AI Professor turns a patient presentation into a ranked differential with
                   verified literature, checked drug names and standardized findings. When the
                   evidence is not there, it says so instead of guessing.
                 </Body>
@@ -547,7 +547,7 @@ export default function LandingView() {
                 Intended use
               </Typography>
               <Typography sx={{ fontFamily: T.sans, fontSize: 15.5, lineHeight: 1.65, color: T.ink2 }}>
-                SmartDiagnosis is decision support for qualified clinicians. It does not diagnose
+                AI Professor is decision support for qualified clinicians. It does not diagnose
                 autonomously and it does not replace clinical judgment. It is not yet a certified
                 medical device: the pipeline, the treatment scope and the audit trail are designed
                 to make that path documentable, and every response carries that disclaimer.
