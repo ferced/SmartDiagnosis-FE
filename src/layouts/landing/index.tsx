@@ -4,27 +4,40 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import { alpha } from '@mui/material/styles';
 
 import { RouterLink } from 'src/routes/components';
 
-const PRIMARY = '#1B4965';
+import { LANDING, Wordmark } from 'src/sections/landing/tokens';
+
+// ----------------------------------------------------------------------
 
 interface Props {
   children: React.ReactNode;
 }
 
+const NAV = [
+  { label: 'Safety', href: '#gates' },
+  { label: 'The engine', href: '#engine' },
+  { label: 'Output', href: '#output' },
+  { label: 'Europe', href: '#europe' },
+];
+
+/**
+ * Chrome of the public landing (/ and /demo): a paper-coloured bar that turns
+ * opaque once the visitor scrolls. The dashboard keeps its own layout.
+ */
 export default function LandingLayout({ children }: Props) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
-    <Box sx={{ minHeight: '100vh' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: LANDING.paper, color: LANDING.ink }}>
       <Box
         component="header"
         sx={{
@@ -33,39 +46,39 @@ export default function LandingLayout({ children }: Props) {
           left: 0,
           right: 0,
           zIndex: 1100,
-          transition: 'all 0.3s ease',
-          backdropFilter: scrolled ? 'blur(16px)' : 'none',
-          bgcolor: scrolled ? alpha('#fff', 0.92) : 'transparent',
-          boxShadow: scrolled ? `0 1px 12px ${alpha('#000', 0.06)}` : 'none',
+          transition: 'background-color .3s ease, border-color .3s ease',
+          bgcolor: scrolled ? 'rgba(245,242,236,0.92)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(14px)' : 'none',
+          borderBottom: '1px solid',
+          borderColor: scrolled ? LANDING.hairline : 'transparent',
         }}
       >
         <Container maxWidth="lg">
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ height: 72 }}
-          >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ height: 68 }}>
+            <Box component={RouterLink} href="/" sx={{ textDecoration: 'none', color: 'inherit' }}>
+              <Wordmark />
+            </Box>
+
             <Stack
-              component={RouterLink}
-              href="/"
               direction="row"
-              alignItems="center"
-              spacing={1.5}
-              sx={{ textDecoration: 'none' }}
+              spacing={3.5}
+              sx={{ display: { xs: 'none', md: 'flex' }, fontFamily: LANDING.sans }}
             >
-              <Box
-                component="img"
-                src="/logo/logo_single.png"
-                alt="AI Professor"
-                sx={{
-                  width: 40,
-                  height: 40,
-                  objectFit: 'contain',
-                  filter: scrolled ? 'none' : 'brightness(0) invert(1)',
-                  transition: 'filter 0.3s',
-                }}
-              />
+              {NAV.map((item) => (
+                <Box
+                  key={item.href}
+                  component="a"
+                  href={item.href}
+                  sx={{
+                    fontSize: 14,
+                    color: LANDING.ink2,
+                    textDecoration: 'none',
+                    '&:hover': { color: LANDING.ink },
+                  }}
+                >
+                  {item.label}
+                </Box>
+              ))}
             </Stack>
 
             <Stack direction="row" spacing={1} alignItems="center">
@@ -73,32 +86,33 @@ export default function LandingLayout({ children }: Props) {
                 component={RouterLink}
                 href="/demo"
                 sx={{
-                  fontWeight: 600,
-                  color: scrolled ? 'text.secondary' : alpha('#fff', 0.85),
-                  transition: 'color 0.3s',
-                  '&:hover': { color: scrolled ? PRIMARY : '#fff', bgcolor: 'transparent' },
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  fontFamily: LANDING.sans,
+                  fontWeight: 500,
+                  color: LANDING.ink,
+                  px: 1.5,
+                  whiteSpace: 'nowrap',
+                  '&:hover': { bgcolor: 'rgba(20,24,28,0.05)' },
                 }}
               >
-                Demo
+                Walk through a case
               </Button>
               <Button
                 component={RouterLink}
                 href="/auth/jwt/login"
-                variant="contained"
+                variant="outlined"
                 sx={{
-                  fontWeight: 700,
-                  px: 3,
-                  borderRadius: '10px',
-                  bgcolor: scrolled ? PRIMARY : alpha('#fff', 0.15),
-                  color: '#fff',
-                  backdropFilter: 'blur(8px)',
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    bgcolor: scrolled ? alpha(PRIMARY, 0.9) : alpha('#fff', 0.25),
-                  },
+                  fontFamily: LANDING.sans,
+                  fontWeight: 500,
+                  px: 2.25,
+                  borderRadius: 999,
+                  whiteSpace: 'nowrap',
+                  color: LANDING.ink,
+                  borderColor: LANDING.ink,
+                  '&:hover': { bgcolor: LANDING.ink, color: LANDING.paper, borderColor: LANDING.ink },
                 }}
               >
-                Sign In
+                Sign in
               </Button>
             </Stack>
           </Stack>
