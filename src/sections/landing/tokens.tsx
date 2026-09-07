@@ -41,7 +41,7 @@ export function Wordmark({ light = false }: { light?: boolean }) {
           lineHeight: 1,
         }}
       >
-        SmartDiagnosis
+        AI Professor
       </Box>
     </Box>
   );
