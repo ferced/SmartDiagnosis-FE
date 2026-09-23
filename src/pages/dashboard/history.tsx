@@ -8,7 +8,7 @@ export default function HistoryPage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: History</title>
+        <title>History · AI Professor</title>
       </Helmet>
 
       <HistoryView />

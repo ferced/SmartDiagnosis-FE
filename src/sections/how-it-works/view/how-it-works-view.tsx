@@ -25,7 +25,7 @@ import { DiagnosisData, DiagnosisDetail, ClinicalConcept } from 'src/sections/pr
 // 72yo male: new headache + jaw claudication + systemic inflammatory signs.
 const SAMPLE: DiagnosisData = {
   disclaimer:
-    'GMIS is a clinical decision-support tool. It assists, it does not replace clinical judgement. The physician accepts, modifies or overrides every output.',
+    'AI Professor is a clinical decision-support tool. It assists, it does not replace clinical judgement. The physician accepts, modifies or overrides every output.',
   normalized_concepts: [
     { input: 'new headache', code: 'HP:0002315', name: 'Headache', system: 'HPO', url: 'https://hpo.jax.org/browse/term/HP:0002315' },
     { input: 'fatigue', code: 'HP:0012378', name: 'Fatigue', system: 'HPO', url: 'https://hpo.jax.org/browse/term/HP:0012378' },
@@ -256,7 +256,7 @@ export default function HowItWorksView() {
 
       <Card sx={{ p: 3, mb: 3, bgcolor: (t) => alpha(t.palette.primary.main, 0.04) }}>
         <Typography variant="h5" gutterBottom>
-          GMIS razona — y muestra su trabajo
+          AI Professor razona — y muestra su trabajo
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
           Esta página descompone la <b>cadena de razonamiento real</b> de un diagnóstico, etapa por

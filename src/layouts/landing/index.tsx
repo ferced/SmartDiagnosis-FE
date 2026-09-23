@@ -16,10 +16,10 @@ interface Props {
 }
 
 const NAV = [
-  { label: 'Safety', href: '#gates' },
-  { label: 'The engine', href: '#engine' },
-  { label: 'Output', href: '#output' },
-  { label: 'Europe', href: '#europe' },
+  { label: 'Safety', href: '/#gates' },
+  { label: 'The engine', href: '/#engine' },
+  { label: 'Output', href: '/#output' },
+  { label: 'Europe', href: '/#europe' },
 ];
 
 /**
@@ -67,7 +67,7 @@ export default function LandingLayout({ children }: Props) {
               {NAV.map((item) => (
                 <Box
                   key={item.href}
-                  component="a"
+                  component={RouterLink}
                   href={item.href}
                   sx={{
                     fontSize: 14,

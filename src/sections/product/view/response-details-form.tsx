@@ -527,7 +527,7 @@ export default function ResponseDetails({
         {abstained && (
           <Alert severity="warning" icon={<WarningAmber />} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-              GMIS abstained — confidence below threshold
+              AI Professor abstained — confidence below threshold
             </Typography>
             <Typography variant="body2">
               {abstentionReason ||

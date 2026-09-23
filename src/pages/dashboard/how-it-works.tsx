@@ -8,7 +8,7 @@ export default function HowItWorksPage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: How it works</title>
+        <title>How it works · AI Professor</title>
       </Helmet>
 
       <HowItWorksView />
