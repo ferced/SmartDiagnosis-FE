@@ -468,14 +468,11 @@ export default function ResponseDetails({
           },
         };
       });
-    } else if (decision === 'INCONCLUSIVE') {
-      // Previously a silent console.log: the dialog closed cleanly and nothing
-      // on screen changed, which is indistinguishable from the result having
-      // been applied.
-      setError(
-        'The test result was inconclusive for this condition — it was neither confirmed nor ruled out. Further testing may be required.'
-      );
     }
+    // INCONCLUSIVE — including a CONFIRM the engine downgraded to "needs more
+    // evidence" — changes nothing in the differential. The rare disease panel
+    // shows that outcome itself (reason, outstanding tests, disclaimer) as an
+    // informational result; it used to be raised here as an error snackbar.
   };
 
   const handleDownloadPDF = async () => {

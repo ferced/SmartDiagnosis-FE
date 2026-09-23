@@ -74,6 +74,116 @@ interface RareDiseasePanelProps {
 // alarm accent, and returned a constant colour once the backend started
 // emitting numeric percentages.
 
+type PendingConfirmation = {
+  finding?: string;
+  test?: string;
+  if_absent?: string;
+  resolved?: boolean;
+};
+
+// What POST /diagnosis/test-result returns. Only `decision`, `action`,
+// `explanation` and `additionalTestsNeeded` are guaranteed: the rest was added
+// when the endpoint went through the engine's safety gates, and older API
+// versions do not send it.
+type TestResultResponse = {
+  decision?: string;
+  action?: any;
+  explanation?: string;
+  additionalTestsNeeded?: string[] | null;
+  disclaimer?: string;
+  modelDecision?: string;
+  downgraded?: boolean;
+  downgradeReason?: string;
+  provisional?: boolean;
+  provisionalReason?: string;
+  pendingConfirmations?: PendingConfirmation[] | null;
+  confidenceThreshold?: number;
+};
+
+type TestOutcome = TestResultResponse & { disease: string };
+
+// Everything still outstanding: the backend already merges the tests the model
+// asked for with the evidence gate's unresolved dependencies into
+// additionalTestsNeeded; the pending confirmations are only a fallback.
+function outstandingTests(outcome: TestOutcome): string[] {
+  const requested = (outcome.additionalTestsNeeded || []).filter(Boolean);
+  const pending = (outcome.pendingConfirmations || [])
+    .filter((p) => !p.resolved && p.test)
+    .map((p) => p.test as string);
+  return Array.from(new Set(requested.length > 0 ? requested : pending));
+}
+
+// The engine's verdict on the last submitted result. INCONCLUSIVE — including
+// a CONFIRM the engine downgraded because the evidence does not yet support
+// it — is a legitimate outcome with next steps, not an error: it used to
+// surface as a red "error" snackbar.
+function TestOutcomeAlert({ outcome, onClose }: { outcome: TestOutcome; onClose: () => void }) {
+  const { decision, action } = outcome;
+  const tests = outstandingTests(outcome);
+
+  let severity: 'success' | 'info' = 'info';
+  let title: string;
+  let body = outcome.explanation;
+
+  // Same conditions the parent applies (response-details-form), so the text
+  // never claims a change to the differential that did not happen.
+  if (decision === 'CONFIRM') {
+    severity = 'success';
+    title = action?.shouldBecomePrimary
+      ? `${outcome.disease}: supported by the results and moved to the differential`
+      : `${outcome.disease}: supported by the results`;
+  } else if (decision === 'RULE_OUT') {
+    title = action?.shouldBeDismissed
+      ? `${outcome.disease}: ruled out by the results and removed from this panel`
+      : `${outcome.disease}: argued against by the results`;
+  } else if (outcome.downgraded) {
+    // The model's own explanation argued for the verdict the engine refused,
+    // so the engine's reason is what is shown.
+    title = `${outcome.disease}: needs more evidence before it can be confirmed`;
+    body =
+      outcome.downgradeReason ||
+      'The results recorded so far do not allow a confirmation. The tests below are the next step.';
+  } else {
+    title = `${outcome.disease}: inconclusive — neither confirmed nor ruled out`;
+  }
+
+  const provisionalReason =
+    outcome.provisional && outcome.provisionalReason && outcome.provisionalReason !== body
+      ? outcome.provisionalReason
+      : '';
+
+  return (
+    <Alert severity={severity} onClose={onClose} sx={{ mt: 2 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+        {title}
+      </Typography>
+      {body && <Typography variant="body2">{body}</Typography>}
+      {provisionalReason && (
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          {provisionalReason}
+        </Typography>
+      )}
+      {tests.length > 0 && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+            Outstanding tests
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+            {tests.map((test) => (
+              <Chip key={test} label={test} size="small" color="info" variant="outlined" />
+            ))}
+          </Stack>
+        </Box>
+      )}
+      {outcome.disclaimer && (
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+          {outcome.disclaimer}
+        </Typography>
+      )}
+    </Alert>
+  );
+}
+
 const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   rareDiseases,
   onTestSubmit,
@@ -90,6 +200,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [symptomsPresent, setSymptomsPresent] = useState<{ [key: string]: boolean }>({});
+  const [lastOutcome, setLastOutcome] = useState<TestOutcome | null>(null);
 
   const handleSymptomsResponse = (diseaseId: string, hasSymptoms: boolean) => {
     setSymptomsPresent({ ...symptomsPresent, [diseaseId]: hasSymptoms });
@@ -134,7 +245,8 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
         },
       });
 
-      const { decision, action } = response.data;
+      const result: TestResultResponse = response.data || {};
+      const { decision = '', action = {} } = result;
 
       // Surface the tests the clinician actually ran (with results) so the
       // parent can feed them back to the engine as authoritative case state.
@@ -142,6 +254,8 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
         name: t,
         result: testResults[t] || '',
       }));
+
+      setLastOutcome({ ...result, disease: selectedDisease.diagnosis });
 
       onTestSubmit(
         decision,
@@ -198,6 +312,10 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
             The following rare diseases share symptom overlap with the primary diagnosis.
             Review discriminator symptoms to rule out critical conditions.
           </Alert>
+
+          {lastOutcome && (
+            <TestOutcomeAlert outcome={lastOutcome} onClose={() => setLastOutcome(null)} />
+          )}
         </CardContent>
 
         <Box
