@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as Yup from 'yup';
-import { useState, useEffect } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
@@ -20,7 +20,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import { getErrorMessage } from 'src/utils/api-error';
+import { getErrorMessage, isRequestCancelled } from 'src/utils/api-error';
+import { loadPatientDraft, savePatientDraft, clearPatientDraft } from 'src/utils/patient-draft';
 
 import { HOST_API } from 'src/config-global';
 import { uploadDocuments } from 'src/api/documents';
@@ -51,7 +52,7 @@ const LOADING_STAGES = [
   'Finalizing diagnoses and treatment plan…',
 ];
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ onCancel }: { onCancel: () => void }) {
   const [stageIdx, setStageIdx] = useState(0);
   const [elapsed, setElapsed] = useState(0);
 
@@ -72,15 +73,25 @@ function LoadingSkeleton() {
 
   return (
     <Box sx={{ mt: 3 }}>
-      <Alert severity="info" icon={<CircularProgress size={22} />} sx={{ mb: 2 }}>
+      <Alert
+        severity="info"
+        icon={<CircularProgress size={22} />}
+        sx={{ mb: 2 }}
+        action={
+          <Button color="inherit" size="small" onClick={onCancel}>
+            Cancel
+          </Button>
+        }
+      >
         <Stack spacing={0.5}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
             {LOADING_STAGES[stageIdx]}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Running several AI analyses in parallel — this usually takes 30–90s.
-            Elapsed {mm}:{ss}. You can keep this tab open; nothing is frozen.
-            {elapsed >= 90 && ' Complex or ultra-rare cases can take a little longer.'}
+            Running several AI analyses in parallel — this can take up to ~3 minutes.
+            Elapsed {mm}:{ss}. Keep this tab open; nothing is frozen. Cancelling takes you back
+            to the form with your input intact.
+            {elapsed >= 120 && ' Complex or ultra-rare cases take the longest.'}
           </Typography>
         </Stack>
       </Alert>
@@ -132,6 +143,8 @@ export default function PatientForm() {
   const [followUpAnswers, setFollowUpAnswers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [confirmNewCase, setConfirmNewCase] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const submitAbortRef = useRef<AbortController | null>(null);
 
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig | null>(null);
   const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
@@ -151,7 +164,55 @@ export default function PatientForm() {
     resolver: yupResolver(PatientSchema),
   });
 
-  const { reset, handleSubmit } = methods;
+  const { reset, watch, handleSubmit } = methods;
+
+  // Restore an unsent draft, then keep saving the form as the clinician types
+  // (debounced). The last pending save is flushed on unmount so navigating
+  // away mid-sentence doesn't drop it.
+  useEffect(() => {
+    const draft = loadPatientDraft();
+    if (draft) {
+      reset({ ...EMPTY_CASE, ...draft });
+      setDraftRestored(true);
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let pending: Record<string, unknown> | null = null;
+
+    const subscription = watch((values) => {
+      pending = values;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (pending) savePatientDraft(pending);
+        pending = null;
+      }, 500);
+    });
+
+    return () => {
+      clearTimeout(timer);
+      if (pending) savePatientDraft(pending);
+      subscription.unsubscribe();
+    };
+  }, [reset, watch]);
+
+  // A diagnosis can run for minutes; warn before a reload or tab close throws
+  // the in-flight request away. (Also covers follow-up rounds, which share
+  // this loading flag.)
+  useEffect(() => {
+    if (!isLoading) return undefined;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Chrome/Edge still require returnValue to be set.
+      // eslint-disable-next-line no-param-reassign
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isLoading]);
+
+  // Leaving the page aborts the submission instead of letting it land on an
+  // unmounted view.
+  useEffect(() => () => submitAbortRef.current?.abort(), []);
 
   useEffect(() => {
     const savedConfig = sessionStorage.getItem('openaiConfig');
@@ -168,7 +229,13 @@ export default function PatientForm() {
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
     const { files, ...patientData } = data;
     setOriginalPatientInfo(patientData);
+    setDraftRestored(false);
     setIsLoading(true);
+
+    submitAbortRef.current?.abort();
+    const controller = new AbortController();
+    submitAbortRef.current = controller;
+    const { signal } = controller;
 
     const token = sessionStorage.getItem('accessToken');
     if (!token) {
@@ -180,14 +247,15 @@ export default function PatientForm() {
 
     try {
       const conversationResponse = await axios.post(`${HOST_API}/conversation`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       const conversationId = conversationResponse.data.id;
 
       if (files && files.length > 0) {
          const filesToUpload = files.filter((f: any) => f instanceof File);
          if (filesToUpload.length > 0) {
-            await uploadDocuments(filesToUpload, conversationId);
+            await uploadDocuments(filesToUpload, conversationId, undefined, signal);
          }
       }
 
@@ -201,6 +269,7 @@ export default function PatientForm() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        signal,
       });
 
       setResponseDetails(response.data);
@@ -217,10 +286,18 @@ export default function PatientForm() {
       // The input is deliberately NOT cleared here: "Revise case" returns to
       // the form with it intact, and only "New case" empties it.
     } catch (err: any) {
+      setIsLoading(false);
+      // Cancelled by the clinician: back to the form, input intact, no error.
+      if (isRequestCancelled(err)) return;
       console.error(err.response ? err.response.data : err.message);
       setError(getErrorMessage(err, 'The diagnosis request failed. Please try again.'));
-      setIsLoading(false);
+    } finally {
+      if (submitAbortRef.current === controller) submitAbortRef.current = null;
     }
+  };
+
+  const handleCancelSubmit = () => {
+    submitAbortRef.current?.abort();
   };
 
   const handleCloseSnackbar = () => {
@@ -247,7 +324,9 @@ export default function PatientForm() {
     setConfirmNewCase(false);
     clearResult();
     setOriginalPatientInfo({});
+    setDraftRestored(false);
     reset(EMPTY_CASE);
+    clearPatientDraft();
   };
 
   const handleOpenAIConfigSet = (config: OpenAIConfig | null) => {
@@ -296,7 +375,7 @@ export default function PatientForm() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <LoadingSkeleton />
+              <LoadingSkeleton onCancel={handleCancelSubmit} />
             </m.div>
           )}
 
@@ -306,6 +385,19 @@ export default function PatientForm() {
               key="form"
               {...fadeIn}
             >
+              {draftRestored && (
+                <Alert
+                  severity="info"
+                  sx={{ mb: 3 }}
+                  action={
+                    <Button color="inherit" size="small" onClick={handleNewCase}>
+                      Clear form
+                    </Button>
+                  }
+                >
+                  Your case details were restored from this browser tab.
+                </Alert>
+              )}
               <MainForm
                 methods={methods}
                 isLoading={isLoading}
@@ -332,13 +424,14 @@ export default function PatientForm() {
                 flexWrap="wrap"
                 useFlexGap
               >
-                <Button variant="outlined" color="inherit" startIcon={<NoteAlt />} onClick={handleReviseCase}>
+                <Button variant="outlined" color="inherit" startIcon={<NoteAlt />} onClick={handleReviseCase} disabled={isLoading}>
                   Revise case
                 </Button>
                 <Button
                   variant="contained"
                   startIcon={<AddCircleOutline />}
                   onClick={() => setConfirmNewCase(true)}
+                  disabled={isLoading}
                 >
                   New case
                 </Button>

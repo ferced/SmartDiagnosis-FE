@@ -23,6 +23,8 @@ interface FollowUpModalProps {
   setFollowUpAnswers: React.Dispatch<React.SetStateAction<string[]>>;
   handleSubmit: () => void;
   isLoading: boolean;
+  // Aborts the in-flight round. When provided, Cancel stays live while loading.
+  onCancelRequest?: () => void;
 }
 
 const FollowUpModal: React.FC<FollowUpModalProps> = ({
@@ -33,6 +35,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
   setFollowUpAnswers,
   handleSubmit,
   isLoading,
+  onCancelRequest,
 }) => {
   const answeredCount = followUpAnswers.filter((a) => a && a.trim().length > 0).length;
   const totalCount = followUpQuestions?.length || 0;
@@ -108,7 +111,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
         <Box sx={{ px: 3, pt: 1 }}>
           <LinearProgress sx={{ borderRadius: 1, height: 5, mb: 1 }} />
           <Typography variant="caption" color="text.secondary">
-            Re-evaluating the case with your answers — this can take up to a minute. Nothing is frozen.
+            Re-evaluating the case with your answers — this can take up to ~3 minutes. Nothing is frozen.
           </Typography>
         </Box>
       )}
@@ -116,17 +119,19 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({
       <DialogActions sx={{ px: 3, py: 2 }}>
         {/* Cancel used to stay live during the request: closing mid-flight left
             the round running, and it still landed — and counted — after the
-            modal was gone. */}
+            modal was gone. While loading it now aborts the request instead
+            (the round is not counted and the answers are kept), and is only
+            live when the caller can abort. */}
         <Button
           variant="outlined"
-          onClick={onClose}
-          disabled={isLoading}
+          onClick={isLoading ? onCancelRequest : onClose}
+          disabled={isLoading && !onCancelRequest}
           sx={{
             fontSize: { xs: '0.8rem', sm: '1rem' },
             padding: { xs: '6px 12px', sm: '8px 16px' },
           }}
         >
-          Cancel
+          {isLoading ? 'Cancel request' : 'Cancel'}
         </Button>
         <Button
           variant="contained"

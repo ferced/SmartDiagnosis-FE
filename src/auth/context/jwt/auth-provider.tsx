@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useReducer, useCallback } from 'react';
 
 import axios, { endpoints } from 'src/utils/axios';
+import { clearPatientDraft } from 'src/utils/patient-draft';
 
 import { AuthContext } from './auth-context';
 import { setSession, isValidToken } from './utils';
@@ -181,6 +182,9 @@ export function AuthProvider({ children }: Props) {
   // LOGOUT
   const logout = useCallback(async () => {
     setSession(null);
+    // An explicit sign-out drops the unsent case draft (a session *expiry*
+    // keeps it, so the clinician can sign back in and carry on).
+    clearPatientDraft();
     dispatch({
       type: Types.LOGOUT,
     });

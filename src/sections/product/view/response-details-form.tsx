@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { m } from 'framer-motion';
-import { useMemo, useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 
 import {
   Science,
@@ -32,7 +32,7 @@ import {
   LinearProgress,
 } from '@mui/material';
 
-import { getErrorMessage } from 'src/utils/api-error';
+import { getErrorMessage, isRequestCancelled } from 'src/utils/api-error';
 
 import { HOST_API } from 'src/config-global';
 
@@ -93,6 +93,19 @@ export default function ResponseDetails({
   // case was scattered across History as unrelated one-message entries.
   const conversationId = responseDetails?.conversationId;
   const conversationRef = conversationId ? { conversationId } : {};
+
+  // In-flight follow-up round / final write-up, so the clinician can cancel a
+  // round and so neither lands after this view is gone (Revise / New case).
+  const followUpAbortRef = useRef<AbortController | null>(null);
+  const narrativeAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => () => {
+      followUpAbortRef.current?.abort();
+      narrativeAbortRef.current?.abort();
+    },
+    []
+  );
 
   const {
     diagnosesData,
@@ -168,6 +181,8 @@ export default function ResponseDetails({
       if (!token) return;
 
       setNarrativeLoading(true);
+      const controller = new AbortController();
+      narrativeAbortRef.current = controller;
       try {
         const payload = {
           originalPatientInfo: {
@@ -202,12 +217,13 @@ export default function ResponseDetails({
 
         const resp = await axios.post(`${HOST_API}/diagnosis/followup`, payload, {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
 
         const narrative = resp?.data?.followUpResponse?.response;
         if (narrative) setFinalNarrative(narrative);
       } catch (err) {
-        console.error('Error fetching final diagnosis writeup:', err);
+        if (!isRequestCancelled(err)) console.error('Error fetching final diagnosis writeup:', err);
       } finally {
         setNarrativeLoading(false);
       }
@@ -244,8 +260,10 @@ export default function ResponseDetails({
         });
       }
 
+      // Committed to state only once the round succeeds: a failed or
+      // cancelled round used to leave its Q&A in the history, so the retry
+      // sent the same answers twice.
       const updatedConversationHistory = [...conversationHistory, ...newConversationEntries];
-      setConversationHistory(updatedConversationHistory);
 
       const followUpRequest = {
         originalPatientInfo: {
@@ -287,11 +305,16 @@ export default function ResponseDetails({
       // permanently dead-ending the case on a conclusion that never happened.
       const newFollowUpCounter = followUpCounter + 1;
 
+      followUpAbortRef.current?.abort();
+      const controller = new AbortController();
+      followUpAbortRef.current = controller;
+
       if (newFollowUpCounter === 3) {
         const response = await axios.post(`${HOST_API}/diagnoses/followup`, followUpRequest, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          signal: controller.signal,
         });
 
         const responseData = response.data;
@@ -326,6 +349,7 @@ export default function ResponseDetails({
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          signal: controller.signal,
         });
 
         if (!response.data) {
@@ -335,6 +359,7 @@ export default function ResponseDetails({
         setResponseDetails(response.data);
       }
 
+      setConversationHistory(updatedConversationHistory);
       setFollowUpCounter(newFollowUpCounter);
       setFollowUpAnswers([]);
       setAdditionalInfo('');
@@ -342,6 +367,11 @@ export default function ResponseDetails({
       setShowFollowUp(false);
       setActiveStep(0);
     } catch (err) {
+      if (isRequestCancelled(err)) {
+        // Cancelled by the clinician: modal stays open with the answers.
+        setIsLoading(false);
+        return;
+      }
       console.error('Error in handleFollowUpSubmit:', err);
       console.error('Error response:', err.response?.data);
       setError(getErrorMessage(err, 'The follow-up round failed. Please try again.'));
@@ -877,6 +907,7 @@ export default function ResponseDetails({
               followUpAnswers={followUpAnswers}
               setFollowUpAnswers={setFollowUpAnswers}
               handleSubmit={handleFollowUpSubmit}
+              onCancelRequest={() => followUpAbortRef.current?.abort()}
               isLoading={isLoading}
             />
           )}
