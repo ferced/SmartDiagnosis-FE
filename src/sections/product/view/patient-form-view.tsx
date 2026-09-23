@@ -33,6 +33,7 @@ import { OpenAIConfigModal } from 'src/components/openai-config';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
+import DailyUsage from './DailyUsage';
 import ClinicalDisclaimer from './ClinicalDisclaimer';
 import ResponseDetails from './response-details-form';
 import NoDifferentialPanel from './NoDifferentialPanel';
@@ -144,6 +145,7 @@ export default function PatientForm() {
   const [error, setError] = useState<string | null>(null);
   const [confirmNewCase, setConfirmNewCase] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const submitAbortRef = useRef<AbortController | null>(null);
 
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig | null>(null);
@@ -283,6 +285,7 @@ export default function PatientForm() {
       setActiveStep(0);
       setIsLoading(false);
       setResponseReceived(true);
+      setUsageRefreshKey((k) => k + 1);
       // The input is deliberately NOT cleared here: "Revise case" returns to
       // the form with it intact, and only "New case" empties it.
     } catch (err: any) {
@@ -365,6 +368,10 @@ export default function PatientForm() {
   return (
     <>
       <FormProvider methods={methods} onSubmit={methods.handleSubmit(onSubmit)}>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1.5 }}>
+          <DailyUsage refreshKey={usageRefreshKey} />
+        </Stack>
+
         <AnimatePresence mode="wait">
           {/* Loading skeleton */}
           {isLoading && !responseReceived && (
