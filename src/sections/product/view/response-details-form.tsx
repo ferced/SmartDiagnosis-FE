@@ -78,7 +78,9 @@ export default function ResponseDetails({
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [followUpCounter, setFollowUpCounter] = useState(0);
   const [finalDiagnosis, setFinalDiagnosis] = useState<DiagnosisDetail | null>(null);
-  const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(null);
+  const [preservedRareDiagnoses, setPreservedRareDiagnoses] = useState<DiagnosisDetail[] | null>(
+    null
+  );
   const [archivedDiagnoses, setArchivedDiagnoses] = useState<ArchivedDiagnosis[]>([]);
   const [finalNarrative, setFinalNarrative] = useState<string | null>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
@@ -118,7 +120,8 @@ export default function ResponseDetails({
     workupReason,
     recommendedWorkup,
   } = useMemo(() => {
-    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+    const diagnoses =
+      responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return {
       diagnosesData: diagnoses.common_diagnoses || [],
       disclaimer: diagnoses.disclaimer || '',
@@ -136,7 +139,8 @@ export default function ResponseDetails({
 
   const rareDiseasesData = useMemo(() => {
     if (preservedRareDiagnoses) return preservedRareDiagnoses;
-    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+    const diagnoses =
+      responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     return diagnoses.rare_diagnoses || null;
   }, [preservedRareDiagnoses, responseDetails]);
 
@@ -149,7 +153,8 @@ export default function ResponseDetails({
   // whenever the new response actually carries a list; keep the old one only
   // when it does not.
   useEffect(() => {
-    const diagnoses = responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
+    const diagnoses =
+      responseDetails?.diagnoses || (responseDetails as any)?.followUpResponse || {};
     if (diagnoses.rare_diagnoses && diagnoses.rare_diagnoses.length > 0) {
       setPreservedRareDiagnoses(diagnoses.rare_diagnoses);
     }
@@ -233,7 +238,11 @@ export default function ResponseDetails({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finalDiagnosis, finalNarrative]);
 
-  const showFollowUpButton = diagnosesData.length > 1 && follow_up_questions.length > 0 && followUpCounter < 3 && !finalDiagnosis;
+  const showFollowUpButton =
+    diagnosesData.length > 1 &&
+    follow_up_questions.length > 0 &&
+    followUpCounter < 3 &&
+    !finalDiagnosis;
 
   const handleFollowUpSubmit = async () => {
     setIsLoading(true);
@@ -284,13 +293,13 @@ export default function ResponseDetails({
         initialResponse: {
           disclaimer,
           diagnoses: diagnosesData,
-          follow_up_questions
+          follow_up_questions,
         },
         followUpAnswers,
         additionalInfo: additionalInfo.trim(),
-        conversationHistory: updatedConversationHistory.map(entry => ({
+        conversationHistory: updatedConversationHistory.map((entry) => ({
           question: entry.question,
-          response: entry.answer
+          response: entry.answer,
         })),
         ...conversationRef,
         ...(openAIConfig && { openaiConfig: openAIConfig }),
@@ -320,7 +329,11 @@ export default function ResponseDetails({
         const responseData = response.data;
         const diagnosisData = responseData?.followUpResponse || responseData?.diagnoses;
 
-        if (diagnosisData && diagnosisData.common_diagnoses && diagnosisData.common_diagnoses.length > 0) {
+        if (
+          diagnosisData &&
+          diagnosisData.common_diagnoses &&
+          diagnosisData.common_diagnoses.length > 0
+        ) {
           const finalDiag = diagnosisData.common_diagnoses[0];
           setFinalDiagnosis(finalDiag);
 
@@ -330,8 +343,8 @@ export default function ResponseDetails({
               ...diagnosisData,
               common_diagnoses: [finalDiag],
               follow_up_questions: [],
-              rare_diagnoses: preservedRareDiagnoses || diagnosisData.rare_diagnoses
-            }
+              rare_diagnoses: preservedRareDiagnoses || diagnosisData.rare_diagnoses,
+            },
           };
 
           setResponseDetails(modifiedResponse);
@@ -404,7 +417,9 @@ export default function ResponseDetails({
     }
 
     if (decision === 'CONFIRM' && action.shouldBecomePrimary) {
-      const rareDisease = rareDiseasesData?.find((d: DiagnosisDetail) => d.diagnosis === rareDiseaseId);
+      const rareDisease = rareDiseasesData?.find(
+        (d: DiagnosisDetail) => d.diagnosis === rareDiseaseId
+      );
       if (rareDisease) {
         const confirmedRareDisease: DiagnosisDetail = {
           ...rareDisease,
@@ -426,7 +441,7 @@ export default function ResponseDetails({
           timestamp: Math.floor(Date.now() / 1000).toString(),
           reason: `Promoted from rare diseases panel after positive test result`,
         };
-        setArchivedDiagnoses(prev => [...prev, auditEntry]);
+        setArchivedDiagnoses((prev) => [...prev, auditEntry]);
 
         setResponseDetails((prev: any) => {
           const prevDiagnoses = prev?.diagnoses || (prev as any)?.followUpResponse || {};
@@ -498,8 +513,8 @@ export default function ResponseDetails({
             disclaimer,
             common_diagnoses: pdfDiagnoses,
             rare_diagnoses: finalDiagnosis ? [] : rareDiseasesData,
-            follow_up_questions
-          }
+            follow_up_questions,
+          },
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -524,7 +539,11 @@ export default function ResponseDetails({
 
   return (
     <Grid container spacing={3} sx={{ mt: 3 }}>
-      <Grid item xs={12} md={!finalDiagnosis && rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}>
+      <Grid
+        item
+        xs={12}
+        md={!finalDiagnosis && rareDiseasesData && rareDiseasesData.length > 0 ? 8 : 12}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="outlined"
@@ -619,184 +638,235 @@ export default function ResponseDetails({
               ? topConfidence || details.probability
               : details.probability;
             return (
-            <div
-              key={idx}
-              style={{
-                display: activeStep === idx ? 'block' : 'none',
-              }}
-            >
-              <m.div {...fadeInUp}>
-                <Card
-                  raised
-                  sx={{
-                    maxWidth: '100%',
-                    mx: 'auto',
-                    bgcolor: theme.palette.background.paper,
-                    boxShadow: confirmed
-                      ? theme.customShadows?.success || '0px 8px 32px rgba(0, 137, 123, 0.2)'
-                      : theme.customShadows?.card || '0px 4px 20px rgba(0, 0, 0, 0.1)',
-                    borderRadius: '8px',
-                    transition: 'all 0.5s ease-in-out',
-                    transform: confirmed ? 'scale(1.02)' : 'scale(1)',
-                    border: cardBorder,
-                  }}
-                >
-                  <Box
+              <div
+                key={idx}
+                style={{
+                  display: activeStep === idx ? 'block' : 'none',
+                }}
+              >
+                <m.div {...fadeInUp}>
+                  <Card
+                    raised
                     sx={{
-                      backgroundColor: headerColor,
-                      color: theme.palette.common.white,
-                      p: 3,
-                      textAlign: 'center',
+                      maxWidth: '100%',
+                      mx: 'auto',
+                      bgcolor: theme.palette.background.paper,
+                      boxShadow: confirmed
+                        ? theme.customShadows?.success || '0px 8px 32px rgba(0, 137, 123, 0.2)'
+                        : theme.customShadows?.card || '0px 4px 20px rgba(0, 0, 0, 0.1)',
+                      borderRadius: '8px',
+                      transition: 'all 0.5s ease-in-out',
+                      transform: confirmed ? 'scale(1.02)' : 'scale(1)',
+                      border: cardBorder,
                     }}
                   >
-                    <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                      {confirmed && <CheckCircleOutline sx={{ fontSize: 36 }} />}
-                      {abstained && <WarningAmber sx={{ fontSize: 36 }} />}
-                      <Typography variant="h4">
-                        {(() => {
-                          if (abstained) return 'Abstained — Confidence Below Threshold';
-                          if (details.provisional || workupFirst)
-                            return 'Provisional — Confirmatory Workup Pending';
-                          if (confirmed) return 'Test-confirmed Diagnosis';
-                          if (working) return 'Working Diagnosis';
-                          return `Diagnosis Result ${idx + 1}`;
-                        })()}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <CardContent>
-                    {/* Diagnosis */}
-                    <Box display="flex" alignItems="center" my={2}>
-                      <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
-                      <Typography variant="h6">{abstained ? 'Leading consideration' : 'Diagnosis'}</Typography>
-                    </Box>
-                    <Typography paragraph sx={{ ml: 4 }}>
-                      {details.diagnosis}
-                    </Typography>
-
-                    {details.provisional && (
-                      <Alert severity="warning" icon={<Science />} sx={{ ml: 4, mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                          Provisional — depends on a finding not yet obtained
+                    <Box
+                      sx={{
+                        backgroundColor: headerColor,
+                        color: theme.palette.common.white,
+                        p: 3,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                        {confirmed && <CheckCircleOutline sx={{ fontSize: 36 }} />}
+                        {abstained && <WarningAmber sx={{ fontSize: 36 }} />}
+                        <Typography variant="h4">
+                          {(() => {
+                            if (abstained) return 'Abstained — Confidence Below Threshold';
+                            if (details.provisional || workupFirst)
+                              return 'Provisional — Confirmatory Workup Pending';
+                            if (confirmed) return 'Test-confirmed Diagnosis';
+                            if (working) return 'Working Diagnosis';
+                            return `Diagnosis Result ${idx + 1}`;
+                          })()}
                         </Typography>
-                        <Typography variant="body2">
-                          {details.provisional_reason ||
-                            'This differential rests on a result that is not in the record.'}
-                        </Typography>
-                        {details.pending_confirmations && details.pending_confirmations.length > 0 && (
-                          <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2.5 }}>
-                            {details.pending_confirmations
-                              .filter((pc) => !pc.resolved)
-                              .map((pc, pcIdx) => (
-                                <li key={pcIdx}>
-                                  <Typography variant="body2">
-                                    <strong>{pc.finding}</strong> — confirm with{' '}
-                                    <strong>{pc.test}</strong>
-                                    {pc.if_absent ? `. ${pc.if_absent}` : ''}
-                                  </Typography>
-                                </li>
-                              ))}
-                          </Box>
-                        )}
-                      </Alert>
-                    )}
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* Probability with bar */}
-                    <Box display="flex" alignItems="center" my={2}>
-                      <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
-                      <Typography variant="h6">Probability</Typography>
-                    </Box>
-                    <Box sx={{ ml: 4 }}>
-                      {(() => {
-                        const percent = parseProbabilityPercent(probabilityLabel);
-                        // An unreadable probability must not draw a bar. The old
-                        // code defaulted to 50%, so an empty string produced a
-                        // confident half-full bar with nothing behind it.
-                        if (percent === null) {
-                          return (
-                            <Typography paragraph color="text.secondary">
-                              {probabilityLabel || 'Not reported by the engine'}
-                            </Typography>
-                          );
-                        }
-                        return (
-                          <>
-                            <Typography paragraph>{probabilityLabel}</Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={percent}
-                              color={probabilityColor(percent)}
-                              sx={{ height: 8, borderRadius: 1, mb: 2 }}
-                            />
-                          </>
-                        );
-                      })()}
-                    </Box>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* Treatment with Markdown */}
-                    <Box display="flex" alignItems="center" my={2}>
-                      <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-                      <Typography variant="h6">
-                        {abstained ? 'Recommended workup & considerations' : 'Treatment'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ ml: 4 }}>
-                      {finalDiagnosis && narrativeLoading && !finalNarrative ? (
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <LinearProgress sx={{ flexGrow: 1, height: 6, borderRadius: 1 }} />
-                          <Typography variant="caption" color="text.secondary">
-                            Compiling full treatment plan…
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <TreatmentPlan
-                          markdown={finalDiagnosis && finalNarrative ? finalNarrative : details.treatment}
-                        />
-                      )}
-                    </Box>
-
-                    {/* Interactions belong immediately under the plan they are
-                        about — it is a safety alert on what was just proposed. */}
-                    {details.drug_interactions && details.drug_interactions.length > 0 && (
-                      <Box sx={{ ml: 4 }}>
-                        <DrugInteractionAlert drugInteractions={details.drug_interactions} />
                       </Box>
-                    )}
+                    </Box>
 
-                    {/* The rejected alternative is the product: asserting the
+                    <CardContent>
+                      {/* Diagnosis */}
+                      <Box display="flex" alignItems="center" my={2}>
+                        <Healing sx={{ color: theme.palette.success.main, mr: 2 }} />
+                        <Typography variant="h6">
+                          {abstained ? 'Leading consideration' : 'Diagnosis'}
+                        </Typography>
+                      </Box>
+                      <Typography paragraph sx={{ ml: 4 }}>
+                        {details.diagnosis}
+                      </Typography>
+
+                      {details.provisional && (
+                        <Alert severity="warning" icon={<Science />} sx={{ ml: 4, mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            Provisional — depends on a finding not yet obtained
+                          </Typography>
+                          <Typography variant="body2">
+                            {details.provisional_reason ||
+                              'This differential rests on a result that is not in the record.'}
+                          </Typography>
+                          {details.pending_confirmations &&
+                            details.pending_confirmations.length > 0 && (
+                              <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2.5 }}>
+                                {details.pending_confirmations
+                                  .filter((pc) => !pc.resolved)
+                                  .map((pc, pcIdx) => (
+                                    <li key={pcIdx}>
+                                      <Typography variant="body2">
+                                        <strong>{pc.finding}</strong> — confirm with{' '}
+                                        <strong>{pc.test}</strong>
+                                        {pc.if_absent ? `. ${pc.if_absent}` : ''}
+                                      </Typography>
+                                    </li>
+                                  ))}
+                              </Box>
+                            )}
+                        </Alert>
+                      )}
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Probability with bar */}
+                      <Box display="flex" alignItems="center" my={2}>
+                        <BarChart sx={{ color: theme.palette.info.main, mr: 2 }} />
+                        <Typography variant="h6">Probability</Typography>
+                      </Box>
+                      <Box sx={{ ml: 4 }}>
+                        {(() => {
+                          const percent = parseProbabilityPercent(probabilityLabel);
+                          // An unreadable probability must not draw a bar. The old
+                          // code defaulted to 50%, so an empty string produced a
+                          // confident half-full bar with nothing behind it.
+                          if (percent === null) {
+                            return (
+                              <Typography paragraph color="text.secondary">
+                                {probabilityLabel || 'Not reported by the engine'}
+                              </Typography>
+                            );
+                          }
+                          return (
+                            <>
+                              <Typography paragraph>{probabilityLabel}</Typography>
+                              <LinearProgress
+                                variant="determinate"
+                                value={percent}
+                                color={probabilityColor(percent)}
+                                sx={{ height: 8, borderRadius: 1, mb: 2 }}
+                              />
+                            </>
+                          );
+                        })()}
+                      </Box>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Treatment with Markdown */}
+                      <Box display="flex" alignItems="center" my={2}>
+                        <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+                        <Typography variant="h6">
+                          {abstained ? 'Recommended workup & considerations' : 'Treatment'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ ml: 4 }}>
+                        {finalDiagnosis && narrativeLoading && !finalNarrative ? (
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <LinearProgress sx={{ flexGrow: 1, height: 6, borderRadius: 1 }} />
+                            <Typography variant="caption" color="text.secondary">
+                              Compiling full treatment plan…
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TreatmentPlan
+                            markdown={
+                              finalDiagnosis && finalNarrative ? finalNarrative : details.treatment
+                            }
+                          />
+                        )}
+                      </Box>
+
+                      {/* Interactions belong immediately under the plan they are
+                        about — it is a safety alert on what was just proposed. */}
+                      {details.drug_interactions && details.drug_interactions.length > 0 && (
+                        <Box sx={{ ml: 4 }}>
+                          <DrugInteractionAlert drugInteractions={details.drug_interactions} />
+                        </Box>
+                      )}
+
+                      {/* The rejected alternative is the product: asserting the
                         right answer is worth less than showing the discrimination
                         that produced it. */}
-                    {details.considered_alternatives &&
-                      details.considered_alternatives.length > 0 && (
+                      {details.considered_alternatives &&
+                        details.considered_alternatives.length > 0 && (
+                          <>
+                            <Divider sx={{ my: 2 }} />
+                            <Box display="flex" alignItems="center" my={2}>
+                              <CompareArrows sx={{ color: theme.palette.info.main, mr: 2 }} />
+                              <Typography variant="h6">Alternatives considered</Typography>
+                            </Box>
+                            <Stack spacing={1.5} sx={{ ml: 4 }}>
+                              {details.considered_alternatives.map((alt, altIdx) => (
+                                <Box key={altIdx}>
+                                  <Typography variant="subtitle2">{alt.diagnosis}</Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {alt.discriminator}
+                                  </Typography>
+                                  {alt.missing_features && alt.missing_features.length > 0 && (
+                                    <Stack
+                                      direction="row"
+                                      flexWrap="wrap"
+                                      gap={0.5}
+                                      sx={{ mt: 0.5 }}
+                                    >
+                                      {alt.missing_features.map((f, fIdx) => (
+                                        <Chip
+                                          key={fIdx}
+                                          label={`absent: ${f}`}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      ))}
+                                    </Stack>
+                                  )}
+                                </Box>
+                              ))}
+                            </Stack>
+                          </>
+                        )}
+
+                      {/* Where recognized bodies disagree, say so rather than
+                        presenting one side of a live controversy as consensus. */}
+                      {details.guideline_basis && details.guideline_basis.length > 0 && (
                         <>
                           <Divider sx={{ my: 2 }} />
                           <Box display="flex" alignItems="center" my={2}>
-                            <CompareArrows sx={{ color: theme.palette.info.main, mr: 2 }} />
-                            <Typography variant="h6">Alternatives considered</Typography>
+                            <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
+                            <Typography variant="h6">Guideline basis</Typography>
                           </Box>
-                          <Stack spacing={1.5} sx={{ ml: 4 }}>
-                            {details.considered_alternatives.map((alt, altIdx) => (
-                              <Box key={altIdx}>
-                                <Typography variant="subtitle2">{alt.diagnosis}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {alt.discriminator}
+                          <Stack spacing={1} sx={{ ml: 4 }}>
+                            {details.guideline_basis.map((g, gIdx) => (
+                              <Box key={gIdx}>
+                                <Box display="flex" alignItems="center" gap={1}>
+                                  <Chip
+                                    label={g.year ? `${g.body} ${g.year}` : g.body}
+                                    size="small"
+                                    color={g.contested ? 'warning' : 'default'}
+                                  />
+                                  {g.contested && (
+                                    <Chip
+                                      label="contested"
+                                      size="small"
+                                      color="warning"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Box>
+                                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                  {g.statement}
                                 </Typography>
-                                {alt.missing_features && alt.missing_features.length > 0 && (
-                                  <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                                    {alt.missing_features.map((f, fIdx) => (
-                                      <Chip
-                                        key={fIdx}
-                                        label={`absent: ${f}`}
-                                        size="small"
-                                        variant="outlined"
-                                      />
-                                    ))}
-                                  </Stack>
+                                {g.contested && g.contested_note && (
+                                  <Typography variant="caption" color="warning.dark">
+                                    {g.contested_note}
+                                  </Typography>
                                 )}
                               </Box>
                             ))}
@@ -804,62 +874,26 @@ export default function ResponseDetails({
                         </>
                       )}
 
-                    {/* Where recognized bodies disagree, say so rather than
-                        presenting one side of a live controversy as consensus. */}
-                    {details.guideline_basis && details.guideline_basis.length > 0 && (
-                      <>
-                        <Divider sx={{ my: 2 }} />
-                        <Box display="flex" alignItems="center" my={2}>
-                          <Assignment sx={{ color: theme.palette.info.main, mr: 2 }} />
-                          <Typography variant="h6">Guideline basis</Typography>
-                        </Box>
-                        <Stack spacing={1} sx={{ ml: 4 }}>
-                          {details.guideline_basis.map((g, gIdx) => (
-                            <Box key={gIdx}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Chip
-                                  label={g.year ? `${g.body} ${g.year}` : g.body}
-                                  size="small"
-                                  color={g.contested ? 'warning' : 'default'}
-                                />
-                                {g.contested && (
-                                  <Chip label="contested" size="small" color="warning" variant="outlined" />
-                                )}
-                              </Box>
-                              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                {g.statement}
-                              </Typography>
-                              {g.contested && g.contested_note && (
-                                <Typography variant="caption" color="warning.dark">
-                                  {g.contested_note}
-                                </Typography>
-                              )}
-                            </Box>
-                          ))}
-                        </Stack>
-                      </>
-                    )}
-
-                    {/* Citations grounded against real PubMed records, with the
+                      {/* Citations grounded against real PubMed records, with the
                         unverified ones marked as such. */}
-                    {details.evidence_links && details.evidence_links.length > 0 && (
-                      <Box sx={{ ml: 4 }}>
-                        <EvidenceLinksSection evidenceLinks={details.evidence_links} />
-                      </Box>
-                    )}
+                      {details.evidence_links && details.evidence_links.length > 0 && (
+                        <Box sx={{ ml: 4 }}>
+                          <EvidenceLinksSection evidenceLinks={details.evidence_links} />
+                        </Box>
+                      )}
 
-                    {/* What would most raise confidence, surfaced as its own
+                      {/* What would most raise confidence, surfaced as its own
                         block rather than buried in the monitoring section. */}
-                    {details.missing_information && details.missing_information.length > 0 && (
-                      <Box sx={{ mt: 3 }}>
-                        <ConfidenceCalibration missingInformation={details.missing_information} />
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </m.div>
-            </div>
-          );
+                      {details.missing_information && details.missing_information.length > 0 && (
+                        <Box sx={{ mt: 3 }}>
+                          <ConfidenceCalibration missingInformation={details.missing_information} />
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </m.div>
+              </div>
+            );
           })}
 
           {/* A conclusion may only be announced when nothing is outstanding.
@@ -870,7 +904,9 @@ export default function ResponseDetails({
               converges after one, stating a false provenance for the answer. */}
           {(() => {
             const outstanding =
-              abstained || workupFirst || displayDiagnoses.some((d: DiagnosisDetail) => d.provisional);
+              abstained ||
+              workupFirst ||
+              displayDiagnoses.some((d: DiagnosisDetail) => d.provisional);
             if (outstanding) return null;
 
             if (finalDiagnosis) {
@@ -932,11 +968,7 @@ export default function ResponseDetails({
             )}
 
             {showFollowUpButton && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => setShowFollowUp(true)}
-              >
+              <Button variant="contained" color="primary" onClick={() => setShowFollowUp(true)}>
                 Follow Up Questions
               </Button>
             )}
@@ -967,7 +999,7 @@ export default function ResponseDetails({
               common_diagnoses: diagnosesData,
               rare_diagnoses: rareDiseasesData,
               disclaimer,
-              follow_up_questions
+              follow_up_questions,
             }}
             conversationId={responseDetails?.conversationId || 0}
             openAIConfig={openAIConfig}

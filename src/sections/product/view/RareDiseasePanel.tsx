@@ -206,7 +206,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
     setSymptomsPresent({ ...symptomsPresent, [diseaseId]: hasSymptoms });
 
     if (hasSymptoms) {
-      const disease = rareDiseases.find(d => d.diagnosis === diseaseId);
+      const disease = rareDiseases.find((d) => d.diagnosis === diseaseId);
       if (disease) {
         // Show what the engine actually proposed. Filling empty arrays with
         // invented placeholders ("Specific symptom that distinguishes this
@@ -219,7 +219,8 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
   };
 
   const handleTestSubmit = async () => {
-    if (!selectedDisease || selectedTests.length === 0 || Object.keys(testResults).length === 0) return;
+    if (!selectedDisease || selectedTests.length === 0 || Object.keys(testResults).length === 0)
+      return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -257,12 +258,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
 
       setLastOutcome({ ...result, disease: selectedDisease.diagnosis });
 
-      onTestSubmit(
-        decision,
-        action,
-        selectedDisease.diagnosis,
-        performedTests
-      );
+      onTestSubmit(decision, action, selectedDisease.diagnosis, performedTests);
 
       setShowTestDialog(false);
       setTestResults({});
@@ -289,17 +285,18 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
     setSubmitError(null);
   };
 
-
   return (
     <Box sx={{ position: 'sticky', top: 20, maxHeight: 'calc(100vh - 100px)' }}>
-      <Card sx={{
-        backgroundColor: theme.palette.warning.lighter,
-        border: '2px solid',
-        borderColor: theme.palette.warning.light,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <Card
+        sx={{
+          backgroundColor: theme.palette.warning.lighter,
+          border: '2px solid',
+          borderColor: theme.palette.warning.light,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <CardContent sx={{ flex: '0 0 auto', pb: 1 }}>
           <Box display="flex" alignItems="center" gap={1} mb={2}>
             <WarningIcon color="warning" />
@@ -309,8 +306,8 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
           </Box>
 
           <Alert severity="warning" icon={<ScienceIcon />}>
-            The following rare diseases share symptom overlap with the primary diagnosis.
-            Review discriminator symptoms to rule out critical conditions.
+            The following rare diseases share symptom overlap with the primary diagnosis. Review
+            discriminator symptoms to rule out critical conditions.
           </Alert>
 
           {lastOutcome && (
@@ -376,20 +373,21 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
                           )}
                         </Box>
 
-                        {disease.discriminatorSymptoms && disease.discriminatorSymptoms.length > 0 && (
-                          <Box>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                              Supporting features present in this patient:
-                            </Typography>
-                            <ul style={{ margin: 0, paddingLeft: 20 }}>
-                              {disease.discriminatorSymptoms.map((symptom, idx) => (
-                                <li key={idx}>
-                                  <Typography variant="body2">{symptom}</Typography>
-                                </li>
-                              ))}
-                            </ul>
-                          </Box>
-                        )}
+                        {disease.discriminatorSymptoms &&
+                          disease.discriminatorSymptoms.length > 0 && (
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Supporting features present in this patient:
+                              </Typography>
+                              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                                {disease.discriminatorSymptoms.map((symptom, idx) => (
+                                  <li key={idx}>
+                                    <Typography variant="body2">{symptom}</Typography>
+                                  </li>
+                                ))}
+                              </ul>
+                            </Box>
+                          )}
 
                         {disease.expectedButAbsent && disease.expectedButAbsent.length > 0 && (
                           <Box>
@@ -507,7 +505,7 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
                         icon={<BiotechIcon />}
                         onClick={() => {
                           if (selectedTests.includes(test)) {
-                            setSelectedTests(selectedTests.filter(t => t !== test));
+                            setSelectedTests(selectedTests.filter((t) => t !== test));
                             const newResults = { ...testResults };
                             delete newResults[test];
                             setTestResults(newResults);
@@ -553,9 +551,15 @@ const RareDiseasePanel: React.FC<RareDiseasePanelProps> = ({
             <Button
               variant="contained"
               color="primary"
-              startIcon={isSubmitting ? <CircularProgress size={20} /> : <Iconify icon="mdi:test-tube" />}
+              startIcon={
+                isSubmitting ? <CircularProgress size={20} /> : <Iconify icon="mdi:test-tube" />
+              }
               onClick={handleTestSubmit}
-              disabled={selectedTests.length === 0 || selectedTests.some(test => !testResults[test]) || isSubmitting}
+              disabled={
+                selectedTests.length === 0 ||
+                selectedTests.some((test) => !testResults[test]) ||
+                isSubmitting
+              }
               fullWidth
             >
               Submit Test Results
