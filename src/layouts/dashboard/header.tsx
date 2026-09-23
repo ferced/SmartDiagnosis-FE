@@ -13,7 +13,6 @@ import Logo from 'src/components/logo';
 import SvgColor from 'src/components/svg-color';
 import { useSettingsContext } from 'src/components/settings';
 
-import Searchbar from '../common/searchbar';
 import { NAV, HEADER } from '../config-layout';
 import AccountPopover from '../common/account-popover';
 
@@ -43,12 +42,10 @@ export default function Header({ onOpenNav }: Props) {
       {lgUp && isNavHorizontal && <Logo full sx={{ mr: 2.5 }} />}
 
       {!lgUp && (
-        <IconButton onClick={onOpenNav}>
+        <IconButton onClick={onOpenNav} aria-label="Open navigation">
           <SvgColor src="/assets/icons/navbar/ic_menu_item.svg" />
         </IconButton>
       )}
-
-      <Searchbar />
 
       <Stack
         flexGrow={1}
@@ -57,14 +54,6 @@ export default function Header({ onOpenNav }: Props) {
         justifyContent="flex-end"
         spacing={{ xs: 0.5, sm: 1 }}
       >
-        {/* <LanguagePopover />
-
-        <NotificationsPopover />
-
-        <ContactsPopover />
-
-        <SettingsButton /> */}
-
         <AccountPopover />
       </Stack>
     </>
