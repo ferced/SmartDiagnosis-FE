@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
-import { getErrorMessage } from 'src/utils/api-error';
+import { getErrorStatus, getErrorMessage, loginThrottledMessage } from 'src/utils/api-error';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { PATH_AFTER_LOGIN } from 'src/config-global';
@@ -69,14 +69,17 @@ export default function JwtLoginView() {
     } catch (error) {
       console.error(error);
       reset();
-      // The API answers a wrong email *or* password with a 400 whose description
-      // says which one it was; don't pass that on.
-      const status = (error as { status?: number } | null)?.status;
-      setErrorMsg(
-        status === 400 || status === 401
-          ? 'Invalid email or password.'
-          : getErrorMessage(error, 'Sign-in failed. Please try again.')
-      );
+      // A wrong email or password is a 400 ("Invalid email or password"); its
+      // description is not passed on. A 429 here is the sign-in throttle, not
+      // the daily analysis limit that getErrorMessage maps every 429 to.
+      const status = getErrorStatus(error);
+      if (status === 400 || status === 401) {
+        setErrorMsg('Invalid email or password.');
+      } else if (status === 429) {
+        setErrorMsg(loginThrottledMessage(error));
+      } else {
+        setErrorMsg(getErrorMessage(error, 'Sign-in failed. Please try again.'));
+      }
     }
   });
 
