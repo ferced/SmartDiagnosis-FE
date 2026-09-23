@@ -14,13 +14,11 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { HOST_API } from 'src/config-global';
+import axios from 'src/utils/axios';
+import { getErrorMessage } from 'src/utils/api-error';
 
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, {
-  RHFSelect,
-  RHFTextField,
-} from 'src/components/hook-form';
+import FormProvider, { RHFSelect, RHFTextField } from 'src/components/hook-form';
 
 import { IUserItem } from './types';
 
@@ -46,7 +44,11 @@ export default function UserNewEditForm({ currentUser }: Props) {
     city: Yup.string(),
     address: Yup.string(),
     role: Yup.string().required('Role is required'),
-    password: currentUser ? Yup.string() : Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),
+    password: currentUser
+      ? Yup.string()
+      : Yup.string()
+          .required('Password is required')
+          .min(6, 'Password must be at least 6 characters'),
   });
 
   const defaultValues = useMemo(
@@ -78,50 +80,29 @@ export default function UserNewEditForm({ currentUser }: Props) {
     formState: { isSubmitting },
   } = methods;
 
+  // Goes through the shared API client, which already carries the session's
+  // Bearer token (set at sign-in from sessionStorage) and ends the session on
+  // a 401. This form used to look for the token in localStorage first, where
+  // it never lives.
   const onSubmit = handleSubmit(async (data) => {
+    const payload = { ...data };
+    if (currentUser && !payload.password) {
+      delete payload.password;
+    }
+
     try {
-      // Get token from different possible locations
-      const token = localStorage.getItem('accessToken') ||
-        localStorage.getItem('token') ||
-        sessionStorage.getItem('accessToken');
-
-      if (!token) {
-        enqueueSnackbar('No authentication token found. Please login again.', { variant: 'error' });
-        router.push(paths.auth.jwt.login);
-        return;
-      }
-
-      const url = currentUser
-        ? `${HOST_API}/user/${currentUser.username}`
-        : `${HOST_API}/user`;
-
-      const method = currentUser ? 'PUT' : 'POST';
-
-      const payload = { ...data };
-      if (currentUser && !payload.password) {
-        delete payload.password;
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        reset();
-        enqueueSnackbar(currentUser ? 'Update success!' : 'Create success!');
-        router.push(paths.dashboard.user.list);
+      if (currentUser) {
+        await axios.put(`/user/${currentUser.username}`, payload);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || errorData.error || 'Failed to save user');
+        await axios.post('/user', payload);
       }
+
+      reset();
+      enqueueSnackbar(currentUser ? 'Update success!' : 'Create success!');
+      router.push(paths.dashboard.user.list);
     } catch (error) {
       console.error(error);
-      enqueueSnackbar(error.message || 'An error occurred', { variant: 'error' });
+      enqueueSnackbar(getErrorMessage(error, 'Failed to save user'), { variant: 'error' });
     }
   });
 
@@ -146,13 +127,7 @@ export default function UserNewEditForm({ currentUser }: Props) {
               <RHFTextField name="displayName" label="Display Name" />
               <RHFTextField name="phoneNumber" label="Phone Number" />
 
-              {!currentUser && (
-                <RHFTextField
-                  name="password"
-                  label="Password"
-                  type="password"
-                />
-              )}
+              {!currentUser && <RHFTextField name="password" label="Password" type="password" />}
 
               {currentUser && (
                 <RHFTextField
