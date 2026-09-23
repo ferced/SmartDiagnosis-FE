@@ -5,10 +5,14 @@ import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+import Checkbox from '@mui/material/Checkbox';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -22,6 +26,7 @@ import { HOST_API } from 'src/config-global';
 
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
+import { ConfirmDialog } from 'src/components/custom-dialog';
 import { useSettingsContext } from 'src/components/settings';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 import {
@@ -66,6 +71,10 @@ export default function HistoryView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+
+  // Deletion is irreversible, so both the per-row and the bulk action go
+  // through a confirmation. `null` = closed, 'bulk' = selected rows.
+  const [pendingDelete, setPendingDelete] = useState<number | 'bulk' | null>(null);
 
   const table = useTable({
     defaultOrderBy: 'created_at',
@@ -156,6 +165,15 @@ export default function HistoryView() {
     }
   }, [selected]);
 
+  const handleConfirmDelete = () => {
+    if (pendingDelete === 'bulk') {
+      handleDeleteRows();
+    } else if (pendingDelete !== null) {
+      handleDeleteRow(pendingDelete);
+    }
+    setPendingDelete(null);
+  };
+
   const generateTitle = (conversation: Conversation) => {
     if (conversation.title) return conversation.title;
 
@@ -193,11 +211,17 @@ export default function HistoryView() {
               }
               action={
                 <Stack direction="row" spacing={1.5}>
-                  <Iconify
-                    icon="solar:trash-bin-trash-bold"
-                    onClick={handleDeleteRows}
-                    sx={{ cursor: 'pointer' }}
-                  />
+                  <Tooltip title="Delete selected">
+                    <IconButton
+                      color="primary"
+                      aria-label={`Delete ${selected.length} selected conversation${
+                        selected.length === 1 ? '' : 's'
+                      }`}
+                      onClick={() => setPendingDelete('bulk')}
+                    >
+                      <Iconify icon="solar:trash-bin-trash-bold" />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               }
             />
@@ -252,10 +276,14 @@ export default function HistoryView() {
                         onClick={() => handleViewRow(row.id)}
                         sx={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox">
-                          <input
-                            type="checkbox"
+                        {/* The row opens the case on click, so the checkbox
+                            must stop the *click* from bubbling —
+                            stopPropagation in onChange came too late and
+                            ticking a box navigated away. */}
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
                             checked={selected.includes(row.id.toString())}
+                            inputProps={{ 'aria-label': `Select ${generateTitle(row)}` }}
                             onChange={(e) => {
                               const newSelected = e.target.checked
                                 ? [...selected, row.id.toString()]
@@ -263,7 +291,6 @@ export default function HistoryView() {
                                     (id) => id !== row.id.toString()
                                   );
                               setSelected(newSelected);
-                              e.stopPropagation();
                             }}
                           />
                         </TableCell>
@@ -283,14 +310,18 @@ export default function HistoryView() {
                         </TableCell>
 
                         <TableCell align="right">
-                          <Iconify
-                            icon="solar:trash-bin-trash-bold"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRow(row.id);
-                            }}
-                            sx={{ cursor: 'pointer' }}
-                          />
+                          <Tooltip title="Delete">
+                            <IconButton
+                              color="error"
+                              aria-label={`Delete ${generateTitle(row)}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPendingDelete(row.id);
+                              }}
+                            >
+                              <Iconify icon="solar:trash-bin-trash-bold" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -317,6 +348,24 @@ export default function HistoryView() {
           }
         />
       </Card>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        title={pendingDelete === 'bulk' ? 'Delete conversations?' : 'Delete conversation?'}
+        content={
+          pendingDelete === 'bulk'
+            ? `${selected.length} selected conversation${
+                selected.length === 1 ? '' : 's'
+              } and all their messages will be permanently deleted. This cannot be undone.`
+            : 'This conversation and all its messages will be permanently deleted. This cannot be undone.'
+        }
+        action={
+          <Button variant="contained" color="error" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        }
+      />
     </Container>
   );
 }
