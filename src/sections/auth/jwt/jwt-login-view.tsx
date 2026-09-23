@@ -36,6 +36,8 @@ export default function JwtLoginView() {
 
   const returnTo = searchParams.get('returnTo');
 
+  const sessionExpired = searchParams.get('expired') === '1';
+
   const password = useBoolean();
 
   const LoginSchema = Yup.object().shape({
@@ -132,6 +134,12 @@ export default function JwtLoginView() {
       {/* <Alert severity="info" sx={{ mb: 3 }}>
         Use email : <strong>admin@ferced.com</strong> / password :<strong> demo1234</strong>
       </Alert> */}
+
+      {sessionExpired && !errorMsg && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Your session expired. Sign in again to continue where you left off.
+        </Alert>
+      )}
 
       {!!errorMsg && (
         <Alert severity="error" sx={{ mb: 3 }}>
