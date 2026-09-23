@@ -1,4 +1,6 @@
 import { m } from 'framer-motion';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -8,6 +10,7 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
+import { Body, Eyebrow, Statement } from './type';
 import { Wordmark, LANDING as T } from './tokens';
 
 /**
@@ -166,67 +169,6 @@ const CASE = {
 };
 
 // ── Small pieces ────────────────────────────────────────────────────────
-function Eyebrow({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
-  return (
-    <Typography
-      component="p"
-      sx={{
-        fontFamily: T.mono,
-        fontSize: 11.5,
-        letterSpacing: '0.18em',
-        textTransform: 'uppercase',
-        color: light ? 'rgba(245,242,236,0.6)' : T.ink3,
-        mb: 2.5,
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-function Statement({
-  children,
-  light = false,
-  size = 'md',
-}: {
-  children: React.ReactNode;
-  light?: boolean;
-  size?: 'md' | 'lg';
-}) {
-  return (
-    <Typography
-      component="h2"
-      sx={{
-        fontFamily: T.serif,
-        fontWeight: 400,
-        letterSpacing: '-0.02em',
-        lineHeight: 1.05,
-        fontSize: size === 'lg' ? { xs: 40, sm: 52, md: 64 } : { xs: 34, sm: 42, md: 50 },
-        color: light ? T.paper : T.ink,
-        textWrap: 'balance',
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-function Body({ children, light = false, sx = {} }: { children: React.ReactNode; light?: boolean; sx?: object }) {
-  return (
-    <Typography
-      sx={{
-        fontFamily: T.sans,
-        fontSize: { xs: 16, md: 17 },
-        lineHeight: 1.6,
-        color: light ? 'rgba(245,242,236,0.72)' : T.ink2,
-        ...sx,
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
 function CaseDossier() {
   return (
     <Box
@@ -287,6 +229,15 @@ function CaseDossier() {
 
 // ── Page ────────────────────────────────────────────────────────────────
 export default function LandingView() {
+  const { hash } = useLocation();
+
+  // The header links are /#section so they also work from /demo; the page is
+  // lazy-loaded, so the browser's own anchor jump happens before it exists.
+  useEffect(() => {
+    if (!hash) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash]);
+
   return (
     <Box sx={{ bgcolor: T.paper, color: T.ink, overflowX: 'hidden' }}>
       {/* ═══ HERO ═══ */}
@@ -394,7 +345,7 @@ export default function LandingView() {
       </Box>
 
       {/* ═══ THE THREE REFUSALS ═══ */}
-      <Box id="gates" component="section" sx={{ bgcolor: T.ink, color: T.paper, py: { xs: 10, md: 14 } }}>
+      <Box id="gates" component="section" sx={{ scrollMarginTop: 68, bgcolor: T.ink, color: T.paper, py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
           <m.div initial="hidden" whileInView="visible" viewport={inView} variants={rise}>
             <Eyebrow light>Safety is the product</Eyebrow>
@@ -436,7 +387,7 @@ export default function LandingView() {
       </Box>
 
       {/* ═══ THE ENGINE ═══ */}
-      <Box id="engine" component="section" sx={{ py: { xs: 10, md: 14 } }}>
+      <Box id="engine" component="section" sx={{ scrollMarginTop: 68, py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, gap: { xs: 5, md: 10 } }}>
             <Box sx={{ position: { md: 'sticky' }, top: { md: 110 }, alignSelf: 'start' }}>
@@ -485,7 +436,7 @@ export default function LandingView() {
       </Box>
 
       {/* ═══ OUTPUT ═══ */}
-      <Box id="output" component="section" sx={{ bgcolor: T.paper2, py: { xs: 10, md: 14 } }}>
+      <Box id="output" component="section" sx={{ scrollMarginTop: 68, bgcolor: T.paper2, py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
           <m.div initial="hidden" whileInView="visible" viewport={inView} variants={rise}>
             <Eyebrow>What the clinician gets back</Eyebrow>
@@ -522,7 +473,7 @@ export default function LandingView() {
       </Box>
 
       {/* ═══ EUROPE ═══ */}
-      <Box id="europe" component="section" sx={{ py: { xs: 10, md: 14 } }}>
+      <Box id="europe" component="section" sx={{ scrollMarginTop: 68, py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
           <m.div initial="hidden" whileInView="visible" viewport={inView} variants={rise}>
             <Eyebrow>Built for European clinical settings</Eyebrow>
