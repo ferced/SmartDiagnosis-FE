@@ -22,6 +22,8 @@ interface ChatBoxProps {
   originalPatientInfo: any;
   initialResponse: any;
   openAIConfig?: OpenAIConfig | null;
+  // Conversation the case lives in; questions are appended to it server-side.
+  conversationId?: number;
 }
 
 export default function ChatBox({
@@ -30,6 +32,7 @@ export default function ChatBox({
   originalPatientInfo,
   initialResponse,
   openAIConfig,
+  conversationId,
 }: ChatBoxProps) {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
@@ -70,6 +73,7 @@ export default function ChatBox({
         initialResponse: contextWithHistory,
         followUpQuestion: question,
         conversationHistory: [...conversationHistory, { question }],
+        ...(conversationId ? { conversationId } : {}),
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
@@ -98,7 +102,7 @@ export default function ChatBox({
     } finally {
       setIsLoading(false);
     }
-  }, [question, isLoading, currentContext, conversationHistory, originalPatientInfo, openAIConfig, setQuestion, enqueueSnackbar]);
+  }, [question, isLoading, currentContext, conversationHistory, originalPatientInfo, openAIConfig, conversationId, setQuestion, enqueueSnackbar]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {

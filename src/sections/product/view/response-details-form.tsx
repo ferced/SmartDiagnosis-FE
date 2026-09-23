@@ -87,6 +87,13 @@ export default function ResponseDetails({
   // performed (it receives them as authoritative "Known Case State").
   const [completedTests, setCompletedTests] = useState<{ name: string; result: string }[]>([]);
 
+  // The backend only appends to an existing conversation when the request body
+  // carries `conversationId`; without it every follow-up round, the final
+  // write-up and every chat question opened a brand-new conversation, so the
+  // case was scattered across History as unrelated one-message entries.
+  const conversationId = responseDetails?.conversationId;
+  const conversationRef = conversationId ? { conversationId } : {};
+
   const {
     diagnosesData,
     disclaimer,
@@ -189,6 +196,7 @@ export default function ResponseDetails({
             question: entry.question,
             response: entry.answer,
           })),
+          ...conversationRef,
           ...(openAIConfig && { openaiConfig: openAIConfig }),
         };
 
@@ -266,6 +274,7 @@ export default function ResponseDetails({
           question: entry.question,
           response: entry.answer
         })),
+        ...conversationRef,
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 

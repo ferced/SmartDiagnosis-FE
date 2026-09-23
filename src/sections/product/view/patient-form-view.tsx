@@ -298,6 +298,7 @@ export default function PatientForm() {
                 originalPatientInfo={originalPatientInfo}
                 initialResponse={getActiveDiagnosis()}
                 openAIConfig={openAIConfig}
+                conversationId={responseDetails.conversationId}
               />
             </m.div>
           )}
