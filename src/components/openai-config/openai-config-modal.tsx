@@ -20,6 +20,8 @@ import {
     CircularProgress,
 } from '@mui/material';
 
+import { getErrorMessage } from 'src/utils/api-error';
+
 import { HOST_API } from 'src/config-global';
 
 interface OpenAIModel {
@@ -121,7 +123,11 @@ export default function OpenAIConfigModal({
             setValidationSuccess(true);
             setValidationError(null);
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Invalid API key or configuration';
+            // A 401 here is OpenAI rejecting the key, not an expired session.
+            const errorMessage =
+                error.response?.data?.error === 'Invalid API key'
+                    ? 'Invalid OpenAI API key.'
+                    : getErrorMessage(error, 'Invalid API key or configuration');
             setValidationError(errorMessage);
             setValidationSuccess(false);
         } finally {

@@ -88,7 +88,6 @@ const StyledMarkdown = styled('div')(({ theme }) => {
       padding: theme.spacing(0.2, 0.5),
       color: theme.palette.warning[lightMode ? 'darker' : 'lighter'],
       backgroundColor: theme.palette.warning[lightMode ? 'lighter' : 'darker'],
-      '&.hljs': { padding: 0, backgroundColor: 'transparent' },
     },
 
     // Table

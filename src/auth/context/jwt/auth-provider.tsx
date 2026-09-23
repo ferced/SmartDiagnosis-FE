@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useReducer, useCallback } from 'react';
 
 import axios, { endpoints } from 'src/utils/axios';
+import { clearPatientDraft } from 'src/utils/patient-draft';
 
 import { AuthContext } from './auth-context';
 import { setSession, isValidToken } from './utils';
@@ -17,7 +18,6 @@ import { AuthUserType, ActionMapType, AuthStateType } from '../../types';
 enum Types {
   INITIAL = 'INITIAL',
   LOGIN = 'LOGIN',
-  REGISTER = 'REGISTER',
   LOGOUT = 'LOGOUT',
 }
 
@@ -26,9 +26,6 @@ type Payload = {
     user: AuthUserType;
   };
   [Types.LOGIN]: {
-    user: AuthUserType;
-  };
-  [Types.REGISTER]: {
     user: AuthUserType;
   };
   [Types.LOGOUT]: undefined;
@@ -51,12 +48,6 @@ const reducer = (state: AuthStateType, action: ActionsType) => {
     };
   }
   if (action.type === Types.LOGIN) {
-    return {
-      ...state,
-      user: action.payload.user,
-    };
-  }
-  if (action.type === Types.REGISTER) {
     return {
       ...state,
       user: action.payload.user,
@@ -149,38 +140,15 @@ export function AuthProvider({ children }: Props) {
     });
   }, []);
 
-  // REGISTER
-  const register = useCallback(
-    async (email: string, password: string, firstName: string, lastName: string) => {
-      const data = {
-        email,
-        password,
-        firstName,
-        lastName,
-      };
-
-      const res = await axios.post(endpoints.auth.register, data);
-
-      const { accessToken, user } = res.data;
-
-      sessionStorage.setItem(STORAGE_KEY, accessToken);
-
-      dispatch({
-        type: Types.REGISTER,
-        payload: {
-          user: {
-            ...user,
-            accessToken,
-          },
-        },
-      });
-    },
-    []
-  );
+  // No self-registration: the API has no /auth/register, accounts are
+  // created by an administrator (user management).
 
   // LOGOUT
   const logout = useCallback(async () => {
     setSession(null);
+    // An explicit sign-out drops the unsent case draft (a session *expiry*
+    // keeps it, so the clinician can sign back in and carry on).
+    clearPatientDraft();
     dispatch({
       type: Types.LOGOUT,
     });
@@ -201,10 +169,9 @@ export function AuthProvider({ children }: Props) {
       unauthenticated: status === 'unauthenticated',
       //
       login,
-      register,
       logout,
     }),
-    [login, logout, register, state.user, status]
+    [login, logout, state.user, status]
   );
 
   return <AuthContext.Provider value={memoizedValue}>{children}</AuthContext.Provider>;

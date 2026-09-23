@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { useSnackbar } from 'notistack';
-import { KeyboardEvent, SetStateAction, useCallback, useState } from 'react';
+import { useState, useCallback, KeyboardEvent, SetStateAction } from 'react';
 
 import SendIcon from '@mui/icons-material/Send';
-import { Box, IconButton, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { Box, Stack, useTheme, TextField, IconButton, Typography } from '@mui/material';
+
+import { getErrorMessage } from 'src/utils/api-error';
 
 import { HOST_API } from 'src/config-global';
 
@@ -20,6 +22,8 @@ interface ChatBoxProps {
   originalPatientInfo: any;
   initialResponse: any;
   openAIConfig?: OpenAIConfig | null;
+  // Conversation the case lives in; questions are appended to it server-side.
+  conversationId?: number;
 }
 
 export default function ChatBox({
@@ -28,6 +32,7 @@ export default function ChatBox({
   originalPatientInfo,
   initialResponse,
   openAIConfig,
+  conversationId,
 }: ChatBoxProps) {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
@@ -68,6 +73,7 @@ export default function ChatBox({
         initialResponse: contextWithHistory,
         followUpQuestion: question,
         conversationHistory: [...conversationHistory, { question }],
+        ...(conversationId ? { conversationId } : {}),
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
@@ -90,11 +96,13 @@ export default function ChatBox({
       setQuestion('');
     } catch (error) {
       console.error('Error submitting question:', error);
-      enqueueSnackbar('Failed to get a response. Please try again.', { variant: 'error' });
+      enqueueSnackbar(getErrorMessage(error, 'Failed to get a response. Please try again.'), {
+        variant: 'error',
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [question, isLoading, currentContext, conversationHistory, originalPatientInfo, openAIConfig, setQuestion, enqueueSnackbar]);
+  }, [question, isLoading, currentContext, conversationHistory, originalPatientInfo, openAIConfig, conversationId, setQuestion, enqueueSnackbar]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {

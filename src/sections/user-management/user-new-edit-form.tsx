@@ -13,6 +13,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
 import { HOST_API } from 'src/config-global';
 
 import { useSnackbar } from 'src/components/snackbar';
@@ -116,7 +117,7 @@ export default function UserNewEditForm({ currentUser }: Props) {
         router.push(paths.dashboard.user.list);
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save user');
+        throw new Error(errorData.message || errorData.error || 'Failed to save user');
       }
     } catch (error) {
       console.error(error);

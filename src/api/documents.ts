@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 import { HOST_API } from 'src/config-global';
+
 import { IFile } from 'src/types/file';
 
 export interface DocumentDTO {
@@ -49,7 +50,12 @@ export const fetchDocuments = async (): Promise<IFile[]> => {
   return (response.data || []).map(mapDocumentToFile);
 };
 
-export const uploadDocuments = async (files: File[], conversationId?: number, description?: string) => {
+export const uploadDocuments = async (
+  files: File[],
+  conversationId?: number,
+  description?: string,
+  signal?: AbortSignal
+) => {
   const uploaded: IFile[] = [];
 
   // If no conversationId is provided, create a new conversation first
@@ -58,6 +64,7 @@ export const uploadDocuments = async (files: File[], conversationId?: number, de
     try {
       const convResponse = await axios.post(`${HOST_API}/conversation`, {}, {
         headers: getAuthHeaders(),
+        signal,
       });
       targetConversationId = convResponse.data.id;
     } catch (error) {
@@ -76,6 +83,7 @@ export const uploadDocuments = async (files: File[], conversationId?: number, de
 
     const response = await axios.post<DocumentDTO>(`${HOST_API}/conversations/${targetConversationId}/documents`, formData, {
       headers: getAuthHeaders(),
+      signal,
     });
 
     uploaded.push(mapDocumentToFile(response.data));

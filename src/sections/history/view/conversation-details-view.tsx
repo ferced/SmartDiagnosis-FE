@@ -11,6 +11,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { paths } from 'src/routes/paths';
 import { useParams } from 'src/routes/hooks';
 
+import { getErrorMessage } from 'src/utils/api-error';
+
 import { HOST_API } from 'src/config-global';
 
 import { useSettingsContext } from 'src/components/settings';
@@ -56,7 +58,7 @@ export default function ConversationDetailView() {
         setMessages(sortedMessages);
       } catch (err) {
         console.error('Error fetching messages:', err);
-        setError(err.response?.data?.message || 'Error fetching messages');
+        setError(getErrorMessage(err, 'Error fetching messages'));
       } finally {
         setLoading(false);
       }

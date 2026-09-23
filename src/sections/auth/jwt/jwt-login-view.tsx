@@ -15,6 +15,8 @@ import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
+import { getErrorMessage } from 'src/utils/api-error';
+
 import { useAuthContext } from 'src/auth/hooks';
 import { PATH_AFTER_LOGIN } from 'src/config-global';
 
@@ -33,6 +35,8 @@ export default function JwtLoginView() {
   const searchParams = useSearchParams();
 
   const returnTo = searchParams.get('returnTo');
+
+  const sessionExpired = searchParams.get('expired') === '1';
 
   const password = useBoolean();
 
@@ -65,7 +69,14 @@ export default function JwtLoginView() {
     } catch (error) {
       console.error(error);
       reset();
-      setErrorMsg(typeof error === 'string' ? error : error.message);
+      // The API answers a wrong email *or* password with a 400 whose description
+      // says which one it was; don't pass that on.
+      const status = (error as { status?: number } | null)?.status;
+      setErrorMsg(
+        status === 400 || status === 401
+          ? 'Invalid email or password.'
+          : getErrorMessage(error, 'Sign-in failed. Please try again.')
+      );
     }
   });
 
@@ -123,6 +134,12 @@ export default function JwtLoginView() {
       {/* <Alert severity="info" sx={{ mb: 3 }}>
         Use email : <strong>admin@ferced.com</strong> / password :<strong> demo1234</strong>
       </Alert> */}
+
+      {sessionExpired && !errorMsg && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Your session expired. Sign in again to continue where you left off.
+        </Alert>
+      )}
 
       {!!errorMsg && (
         <Alert severity="error" sx={{ mb: 3 }}>
