@@ -5,12 +5,14 @@ import { m, AnimatePresence } from 'framer-motion';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
+import { NoteAlt, AddCircleOutline } from '@mui/icons-material';
 import {
   Box,
   Card,
   Grid,
   Alert,
   Stack,
+  Button,
   Skeleton,
   Snackbar,
   Typography,
@@ -25,12 +27,15 @@ import { uploadDocuments } from 'src/api/documents';
 
 import { varFade } from 'src/components/animate';
 import FormProvider from 'src/components/hook-form';
+import { ConfirmDialog } from 'src/components/custom-dialog';
 import { OpenAIConfigModal } from 'src/components/openai-config';
 
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
-import { DiagnosisResponseDetails } from './types';
+import ClinicalDisclaimer from './ClinicalDisclaimer';
 import ResponseDetails from './response-details-form';
+import NoDifferentialPanel from './NoDifferentialPanel';
+import { DiagnosisData, DiagnosisResponseDetails } from './types';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -102,6 +107,20 @@ function LoadingSkeleton() {
   );
 }
 
+// Field values of an empty case. `age` stays undefined (not 0 or '') so the
+// schema reports "Age is required" rather than a type error.
+const EMPTY_CASE = {
+  patientName: '',
+  age: undefined,
+  gender: '',
+  symptoms: '',
+  medicalHistory: '',
+  allergies: '',
+  currentMedications: '',
+  files: [],
+  imageAnalysisType: '',
+};
+
 export default function PatientForm() {
   const [responseReceived, setResponseReceived] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,6 +131,7 @@ export default function PatientForm() {
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpAnswers, setFollowUpAnswers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [confirmNewCase, setConfirmNewCase] = useState(false);
 
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig | null>(null);
   const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
@@ -194,7 +214,8 @@ export default function PatientForm() {
       setActiveStep(0);
       setIsLoading(false);
       setResponseReceived(true);
-      reset();
+      // The input is deliberately NOT cleared here: "Revise case" returns to
+      // the form with it intact, and only "New case" empties it.
     } catch (err: any) {
       console.error(err.response ? err.response.data : err.message);
       setError(getErrorMessage(err, 'The diagnosis request failed. Please try again.'));
@@ -204,6 +225,29 @@ export default function PatientForm() {
 
   const handleCloseSnackbar = () => {
     setError(null);
+  };
+
+  const clearResult = () => {
+    setResponseReceived(false);
+    setResponseDetails(null);
+    setActiveStep(0);
+    setShowFollowUp(false);
+    setFollowUpAnswers([]);
+    setQuestion('');
+    setError(null);
+  };
+
+  // Back to the form with every field as it was submitted. The result itself
+  // is kept server-side in History.
+  const handleReviseCase = () => {
+    clearResult();
+  };
+
+  const handleNewCase = () => {
+    setConfirmNewCase(false);
+    clearResult();
+    setOriginalPatientInfo({});
+    reset(EMPTY_CASE);
   };
 
   const handleOpenAIConfigSet = (config: OpenAIConfig | null) => {
@@ -233,6 +277,9 @@ export default function PatientForm() {
     }
     return null;
   };
+
+  const responseData: Partial<DiagnosisData> =
+    responseDetails?.diagnoses || responseDetails?.followUpResponse || {};
 
   const fadeIn = varFade().in;
 
@@ -278,6 +325,24 @@ export default function PatientForm() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
+              <Stack
+                direction="row"
+                spacing={1.5}
+                justifyContent="flex-end"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Button variant="outlined" color="inherit" startIcon={<NoteAlt />} onClick={handleReviseCase}>
+                  Revise case
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<AddCircleOutline />}
+                  onClick={() => setConfirmNewCase(true)}
+                >
+                  New case
+                </Button>
+              </Stack>
               <ResponseDetails
                 responseDetails={responseDetails}
                 activeStep={activeStep}
@@ -300,15 +365,28 @@ export default function PatientForm() {
                 openAIConfig={openAIConfig}
                 conversationId={responseDetails.conversationId}
               />
+              <ClinicalDisclaimer text={responseData.disclaimer} />
+            </m.div>
+          )}
+
+          {/* No differential: abstention, work-up first, or an empty answer */}
+          {responseReceived && responseDetails && !hasDiagnoses() && (
+            <m.div
+              key="no-differential"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <NoDifferentialPanel
+                data={responseData}
+                onReviseCase={handleReviseCase}
+                onNewCase={handleNewCase}
+              />
+              <ClinicalDisclaimer text={responseData.disclaimer} />
             </m.div>
           )}
         </AnimatePresence>
-
-        {responseReceived && responseDetails && !hasDiagnoses() && (
-          <Alert severity="warning">
-            No diagnoses were returned. Please check the patient information and try again.
-          </Alert>
-        )}
 
         <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
           <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
@@ -316,6 +394,18 @@ export default function PatientForm() {
           </Alert>
         </Snackbar>
       </FormProvider>
+
+      <ConfirmDialog
+        open={confirmNewCase}
+        onClose={() => setConfirmNewCase(false)}
+        title="Start a new case?"
+        content="The form will be cleared. The current result stays available in History."
+        action={
+          <Button variant="contained" onClick={handleNewCase}>
+            New case
+          </Button>
+        }
+      />
 
       <OpenAIConfigModal
         open={showOpenAIConfig}
