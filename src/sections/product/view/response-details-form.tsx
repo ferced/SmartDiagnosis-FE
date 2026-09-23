@@ -32,6 +32,8 @@ import {
   LinearProgress,
 } from '@mui/material';
 
+import { getErrorMessage } from 'src/utils/api-error';
+
 import { HOST_API } from 'src/config-global';
 
 import { varFade } from 'src/components/animate';
@@ -333,9 +335,7 @@ export default function ResponseDetails({
     } catch (err) {
       console.error('Error in handleFollowUpSubmit:', err);
       console.error('Error response:', err.response?.data);
-      setError(
-        typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
-      );
+      setError(getErrorMessage(err, 'The follow-up round failed. Please try again.'));
       setIsLoading(false);
     }
   };
@@ -480,7 +480,7 @@ export default function ResponseDetails({
       link.remove();
     } catch (err) {
       console.error('Error downloading PDF:', err);
-      setError('Failed to download PDF report');
+      setError(getErrorMessage(err, 'Failed to download the PDF report.'));
     }
   };
 

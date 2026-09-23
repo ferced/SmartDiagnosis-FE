@@ -6,9 +6,22 @@ import { HOST_API } from 'src/config-global';
 
 const axiosInstance = axios.create({ baseURL: HOST_API });
 
+// Callers of this instance receive the response body, not the AxiosError. The
+// HTTP status is kept on it so `getErrorMessage` (src/utils/api-error) can
+// still tell a rejected sign-in from an outage.
 axiosInstance.interceptors.response.use(
   (res) => res,
-  (error) => Promise.reject((error.response && error.response.data) || 'Something went wrong')
+  (error) => {
+    const { response } = error;
+    if (!response) return Promise.reject(error);
+    const body = response.data;
+    // eslint-disable-next-line prefer-promise-reject-errors -- callers read the body's fields
+    return Promise.reject(
+      body && typeof body === 'object'
+        ? { ...body, status: response.status }
+        : { error: body || 'Something went wrong', status: response.status }
+    );
+  }
 );
 
 export default axiosInstance;

@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { useSnackbar } from 'notistack';
-import { KeyboardEvent, SetStateAction, useCallback, useState } from 'react';
+import { useState, useCallback, KeyboardEvent, SetStateAction } from 'react';
 
 import SendIcon from '@mui/icons-material/Send';
-import { Box, IconButton, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { Box, Stack, useTheme, TextField, IconButton, Typography } from '@mui/material';
+
+import { getErrorMessage } from 'src/utils/api-error';
 
 import { HOST_API } from 'src/config-global';
 
@@ -90,7 +92,9 @@ export default function ChatBox({
       setQuestion('');
     } catch (error) {
       console.error('Error submitting question:', error);
-      enqueueSnackbar('Failed to get a response. Please try again.', { variant: 'error' });
+      enqueueSnackbar(getErrorMessage(error, 'Failed to get a response. Please try again.'), {
+        variant: 'error',
+      });
     } finally {
       setIsLoading(false);
     }

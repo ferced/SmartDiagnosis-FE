@@ -20,6 +20,8 @@ import {
     CircularProgress,
 } from '@mui/material';
 
+import { getErrorMessage } from 'src/utils/api-error';
+
 import { HOST_API } from 'src/config-global';
 
 interface OpenAIModel {
@@ -121,7 +123,7 @@ export default function OpenAIConfigModal({
             setValidationSuccess(true);
             setValidationError(null);
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Invalid API key or configuration';
+            const errorMessage = getErrorMessage(error, 'Invalid API key or configuration');
             setValidationError(errorMessage);
             setValidationSuccess(false);
         } finally {

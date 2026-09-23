@@ -6,21 +6,23 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
 import {
-  Alert,
   Box,
   Card,
   Grid,
+  Alert,
+  Stack,
   Skeleton,
   Snackbar,
-  Stack,
   Typography,
   LinearProgress,
   CircularProgress,
 } from '@mui/material';
 
-import { HOST_API } from 'src/config-global';
+import { getErrorMessage } from 'src/utils/api-error';
 
+import { HOST_API } from 'src/config-global';
 import { uploadDocuments } from 'src/api/documents';
+
 import { varFade } from 'src/components/animate';
 import FormProvider from 'src/components/hook-form';
 import { OpenAIConfigModal } from 'src/components/openai-config';
@@ -195,9 +197,7 @@ export default function PatientForm() {
       reset();
     } catch (err: any) {
       console.error(err.response ? err.response.data : err.message);
-      setError(
-        typeof err.response?.data === 'object' ? JSON.stringify(err.response.data) : err.message
-      );
+      setError(getErrorMessage(err, 'The diagnosis request failed. Please try again.'));
       setIsLoading(false);
     }
   };
