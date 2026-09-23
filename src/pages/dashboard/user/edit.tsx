@@ -8,7 +8,7 @@ export default function UserEditPage() {
   return (
     <>
       <Helmet>
-        <title>Edit User - AI Professor</title>
+        <title>Edit User · AI Professor</title>
       </Helmet>
 
       <UserEditView />

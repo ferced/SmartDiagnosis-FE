@@ -8,7 +8,7 @@ export default function FileManagerPage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: File Manager</title>
+        <title>File Manager · AI Professor</title>
       </Helmet>
 
       <FileManagerView />

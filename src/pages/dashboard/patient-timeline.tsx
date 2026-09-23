@@ -8,7 +8,7 @@ export default function PatientTimelinePage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: Patient Timeline</title>
+        <title>Patient Timeline · AI Professor</title>
       </Helmet>
 
       <PatientTimelineView />

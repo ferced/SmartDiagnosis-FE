@@ -8,7 +8,7 @@ export default function ProductCreatePage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: Create a new diagnosis</title>
+        <title>Create a new diagnosis · AI Professor</title>
       </Helmet>
 
       <ProductCreateView />

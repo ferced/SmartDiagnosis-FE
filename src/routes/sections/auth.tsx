@@ -36,7 +36,7 @@ const authJwt = {
       path: 'register',
       element: (
         <GuestGuard>
-          <AuthClassicLayout title="Manage the job more effectively with Minimal">
+          <AuthClassicLayout title="Clinical decision support that shows its evidence">
             <JwtRegisterPage />
           </AuthClassicLayout>
         </GuestGuard>
