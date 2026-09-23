@@ -15,7 +15,6 @@ import Logo from 'src/components/logo';
 
 import { HEADER } from '../config-layout';
 import HeaderShadow from './header-shadow';
-import SettingsButton from './settings-button';
 
 // ----------------------------------------------------------------------
 
@@ -50,8 +49,6 @@ export default function HeaderSimple() {
         <Logo full />
 
         <Stack direction="row" alignItems="center" spacing={1}>
-          <SettingsButton />
-
           <Link
             href={paths.faqs}
             component={RouterLink}

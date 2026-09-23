@@ -1,5 +1,4 @@
-import isEqual from 'lodash/isEqual';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import { useLocalStorage } from 'src/hooks/use-local-storage';
 
@@ -17,63 +16,39 @@ type SettingsProviderProps = {
   defaultSettings: SettingsValueProps;
 };
 
+const directionOf = (lang?: string | null) => (lang === 'ar' ? 'rtl' : 'ltr');
+
+// There is no settings drawer any more. The only setting a clinician can still
+// change is the nav layout (the collapse button toggles vertical/mini), so it
+// is the only one read back from storage; the text direction follows the
+// language. Anything else the old drawer may have stored — dark mode,
+// contrast, colour preset, stretch, horizontal nav, direction — is ignored,
+// so nobody is left stuck with a theme they can no longer change.
 export function SettingsProvider({ children, defaultSettings }: SettingsProviderProps) {
-  const { state, update, reset } = useLocalStorage(STORAGE_KEY, defaultSettings);
+  const { state, update } = useLocalStorage(STORAGE_KEY, defaultSettings);
 
-  const [openDrawer, setOpenDrawer] = useState(false);
-
-  const isArabic = localStorageGetItem('i18nextLng') === 'ar';
-
-  useEffect(() => {
-    if (isArabic) {
-      onChangeDirectionByLang('ar');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isArabic]);
-
-  // Direction by lang
-  const onChangeDirectionByLang = useCallback(
-    (lang: string) => {
-      update('themeDirection', lang === 'ar' ? 'rtl' : 'ltr');
-    },
-    [update]
+  const [themeDirection, setThemeDirection] = useState<SettingsValueProps['themeDirection']>(() =>
+    directionOf(localStorageGetItem('i18nextLng'))
   );
 
-  // Drawer
-  const onToggleDrawer = useCallback(() => {
-    setOpenDrawer((prev) => !prev);
+  const onChangeDirectionByLang = useCallback((lang: string) => {
+    setThemeDirection(directionOf(lang));
   }, []);
 
-  const onCloseDrawer = useCallback(() => {
-    setOpenDrawer(false);
-  }, []);
-
-  const canReset = !isEqual(state, defaultSettings);
+  const themeLayout: SettingsValueProps['themeLayout'] =
+    state.themeLayout === 'vertical' || state.themeLayout === 'mini'
+      ? state.themeLayout
+      : defaultSettings.themeLayout;
 
   const memoizedValue = useMemo(
     () => ({
-      ...state,
+      ...defaultSettings,
+      themeLayout,
+      themeDirection,
       onUpdate: update,
-      // Direction
       onChangeDirectionByLang,
-      // Reset
-      canReset,
-      onReset: reset,
-      // Drawer
-      open: openDrawer,
-      onToggle: onToggleDrawer,
-      onClose: onCloseDrawer,
     }),
-    [
-      reset,
-      update,
-      state,
-      canReset,
-      openDrawer,
-      onCloseDrawer,
-      onToggleDrawer,
-      onChangeDirectionByLang,
-    ]
+    [defaultSettings, themeLayout, themeDirection, update, onChangeDirectionByLang]
   );
 
   return <SettingsContext.Provider value={memoizedValue}>{children}</SettingsContext.Provider>;
