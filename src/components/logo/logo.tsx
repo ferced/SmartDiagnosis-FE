@@ -9,74 +9,75 @@ import { RouterLink } from 'src/routes/components';
 
 export interface LogoProps extends BoxProps {
   disabledLink?: boolean;
+  /** Mark + "AI Professor" wordmark instead of the mark alone. */
+  full?: boolean;
 }
 
+/**
+ * AI Professor mark: an "A" inside a circle whose crossbar is the one colour
+ * of the brand (the landing's "verified" teal). Same drawing as the public
+ * landing's Wordmark and the favicon; strokes follow the text colour so it
+ * works on light and dark themes.
+ */
+const VERIFIED = '#0F7B6C';
+
 const Logo = forwardRef<HTMLDivElement, LogoProps>(
-  ({ disabledLink = false, sx, ...other }, ref) => {
-    // OR using local (public folder)
-    // -------------------------------------------------------
+  ({ disabledLink = false, full = false, sx, ...other }, ref) => {
     const logo = (
       <Box
-        component="img"
-        src="/logo/logo_single.png"
-        sx={{ width: 100, height: 100, cursor: 'pointer', ...sx }}
-      />
+        ref={ref}
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1.25,
+          color: 'text.primary',
+          cursor: disabledLink ? 'default' : 'pointer',
+          ...(full ? {} : { width: 40, height: 40 }),
+          ...sx,
+        }}
+        {...other}
+      >
+        <Box
+          component="svg"
+          viewBox="0 0 28 28"
+          aria-label="AI Professor"
+          role="img"
+          sx={{ width: full ? 32 : '100%', height: full ? 32 : '100%', flexShrink: 0 }}
+        >
+          <circle cx="14" cy="14" r="12.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M8 18.5 L14 8 L20 18.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M10.4 14.6 H17.6" stroke={VERIFIED} strokeWidth="1.8" strokeLinecap="round" />
+        </Box>
+        {full && (
+          <Box
+            component="span"
+            sx={{
+              fontFamily: '"Newsreader", "Iowan Old Style", Georgia, serif',
+              fontSize: 23,
+              letterSpacing: '-0.01em',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            AI Professor
+          </Box>
+        )}
+      </Box>
     );
-
-    // const logo = (
-    //   <Box
-    //     ref={ref}
-    //     component="div"
-    //     sx={{
-    //       width: 40,
-    //       height: 40,
-    //       display: 'inline-flex',
-    //       ...sx,
-    //     }}
-    //     {...other}
-    //   >
-    //     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 512 512">
-    //       <defs>
-    //         <linearGradient id="BG1" x1="100%" x2="50%" y1="9.946%" y2="50%">
-    //           <stop offset="0%" stopColor={PRIMARY_DARK} />
-    //           <stop offset="100%" stopColor={PRIMARY_MAIN} />
-    //         </linearGradient>
-
-    //         <linearGradient id="BG2" x1="50%" x2="50%" y1="0%" y2="100%">
-    //           <stop offset="0%" stopColor={PRIMARY_LIGHT} />
-    //           <stop offset="100%" stopColor={PRIMARY_MAIN} />
-    //         </linearGradient>
-
-    //         <linearGradient id="BG3" x1="50%" x2="50%" y1="0%" y2="100%">
-    //           <stop offset="0%" stopColor={PRIMARY_LIGHT} />
-    //           <stop offset="100%" stopColor={PRIMARY_MAIN} />
-    //         </linearGradient>
-    //       </defs>
-
-    //       <g fill={PRIMARY_MAIN} fillRule="evenodd" stroke="none" strokeWidth="1">
-    //         <path
-    //           fill="url(#BG1)"
-    //           d="M183.168 285.573l-2.918 5.298-2.973 5.363-2.846 5.095-2.274 4.043-2.186 3.857-2.506 4.383-1.6 2.774-2.294 3.939-1.099 1.869-1.416 2.388-1.025 1.713-1.317 2.18-.95 1.558-1.514 2.447-.866 1.38-.833 1.312-.802 1.246-.77 1.18-.739 1.111-.935 1.38-.664.956-.425.6-.41.572-.59.8-.376.497-.537.69-.171.214c-10.76 13.37-22.496 23.493-36.93 29.334-30.346 14.262-68.07 14.929-97.202-2.704l72.347-124.682 2.8-1.72c49.257-29.326 73.08 1.117 94.02 40.927z"
-    //         />
-    //         <path
-    //           fill="url(#BG2)"
-    //           d="M444.31 229.726c-46.27-80.956-94.1-157.228-149.043-45.344-7.516 14.384-12.995 42.337-25.267 42.337v-.142c-12.272 0-17.75-27.953-25.265-42.337C189.79 72.356 141.96 148.628 95.69 229.584c-3.483 6.106-6.828 11.932-9.69 16.996 106.038-67.127 97.11 135.667 184 137.278V384c86.891-1.611 77.962-204.405 184-137.28-2.86-5.062-6.206-10.888-9.69-16.994"
-    //         />
-    //         <path
-    //           fill="url(#BG3)"
-    //           d="M450 384c26.509 0 48-21.491 48-48s-21.491-48-48-48-48 21.491-48 48 21.491 48 48 48"
-    //         />
-    //       </g>
-    //     </svg>
-    //   </Box>
-    // );
 
     if (disabledLink) {
       return logo;
     }
 
     return (
-      <Link component={RouterLink} href="/" sx={{ display: 'contents' }}>
+      <Link component={RouterLink} href="/" sx={{ display: 'contents', color: 'inherit' }}>
         {logo}
       </Link>
     );

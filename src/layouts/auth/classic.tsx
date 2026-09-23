@@ -29,6 +29,7 @@ export default function AuthClassicLayout({ children, image, title }: Props) {
 
   const renderLogo = (
     <Logo
+      full
       sx={{
         zIndex: 9,
         position: 'absolute',
