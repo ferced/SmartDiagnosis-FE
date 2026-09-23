@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
@@ -15,7 +14,7 @@ import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
-import { getErrorMessage } from 'src/utils/api-error';
+import { getErrorStatus, getErrorMessage, loginThrottledMessage } from 'src/utils/api-error';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { PATH_AFTER_LOGIN } from 'src/config-global';
@@ -69,14 +68,17 @@ export default function JwtLoginView() {
     } catch (error) {
       console.error(error);
       reset();
-      // The API answers a wrong email *or* password with a 400 whose description
-      // says which one it was; don't pass that on.
-      const status = (error as { status?: number } | null)?.status;
-      setErrorMsg(
-        status === 400 || status === 401
-          ? 'Invalid email or password.'
-          : getErrorMessage(error, 'Sign-in failed. Please try again.')
-      );
+      // A wrong email or password is a 400 ("Invalid email or password"); its
+      // description is not passed on. A 429 here is the sign-in throttle, not
+      // the daily analysis limit that getErrorMessage maps every 429 to.
+      const status = getErrorStatus(error);
+      if (status === 400 || status === 401) {
+        setErrorMsg('Invalid email or password.');
+      } else if (status === 429) {
+        setErrorMsg(loginThrottledMessage(error));
+      } else {
+        setErrorMsg(getErrorMessage(error, 'Sign-in failed. Please try again.'));
+      }
     }
   });
 
@@ -86,7 +88,8 @@ export default function JwtLoginView() {
 
       {/* No self-registration: the API has no /auth/register, accounts are admin-created. */}
       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-        Accounts are created by an administrator. Ask yours for access.
+        Accounts are created by an administrator. Ask yours for access, or to reset a forgotten
+        password.
       </Typography>
     </Stack>
   );
@@ -110,10 +113,6 @@ export default function JwtLoginView() {
         }}
       />
 
-      <Link variant="body2" color="inherit" underline="always" sx={{ alignSelf: 'flex-end' }}>
-        Forgot password?
-      </Link>
-
       <LoadingButton
         fullWidth
         color="inherit"
@@ -130,10 +129,6 @@ export default function JwtLoginView() {
   return (
     <>
       {renderHead}
-
-      {/* <Alert severity="info" sx={{ mb: 3 }}>
-        Use email : <strong>admin@ferced.com</strong> / password :<strong> demo1234</strong>
-      </Alert> */}
 
       {sessionExpired && !errorMsg && (
         <Alert severity="info" sx={{ mb: 3 }}>

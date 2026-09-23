@@ -16,7 +16,7 @@ import { LocalizationProvider } from 'src/locales';
 import ProgressBar from 'src/components/progress-bar';
 import { MotionLazy } from 'src/components/animate/motion-lazy';
 import SnackbarProvider from 'src/components/snackbar/snackbar-provider';
-import { SettingsDrawer, SettingsProvider } from 'src/components/settings';
+import { SettingsProvider } from 'src/components/settings';
 
 import { AuthProvider } from 'src/auth/context/jwt';
 // import { AuthProvider } from 'src/auth/context/auth0';
@@ -51,7 +51,6 @@ export default function App() {
           <ThemeProvider>
             <MotionLazy>
               <SnackbarProvider>
-                <SettingsDrawer />
                 <ProgressBar />
 
                 <Router />

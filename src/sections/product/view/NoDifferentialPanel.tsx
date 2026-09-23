@@ -20,6 +20,17 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
   const recommendedWorkup = data.recommended_workup || [];
   const followUpQuestions = data.follow_up_questions || [];
 
+  // Both gates can fire on one case: the evidence gate caps a differential
+  // that depends on a finding nobody has obtained, and the confidence gate
+  // then abstains. The abstention reason leads, and the work-up reason is
+  // shown under it instead of being dropped (unless it just repeats it).
+  const workupReason = data.workup_reason?.trim() || '';
+  const showWorkupReason =
+    abstained &&
+    workupFirst &&
+    Boolean(workupReason) &&
+    workupReason !== (data.abstention_reason?.trim() || '');
+
   let title = 'No differential was returned for this case';
   let body =
     'The engine did not return any diagnoses for this input. Review the case details — symptoms, history, medications — and resubmit, or start a new case.';
@@ -50,6 +61,14 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
             Top confidence reached: {data.top_confidence}
           </Typography>
+        )}
+        {showWorkupReason && (
+          <Box sx={{ mt: 1.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Work-up first
+            </Typography>
+            <Typography variant="body2">{workupReason}</Typography>
+          </Box>
         )}
       </Alert>
 
@@ -85,7 +104,12 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
         <Button variant="contained" startIcon={<NoteAlt />} onClick={onReviseCase}>
           Revise case
         </Button>
-        <Button variant="outlined" color="inherit" startIcon={<AddCircleOutline />} onClick={onNewCase}>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<AddCircleOutline />}
+          onClick={onNewCase}
+        >
           New case
         </Button>
       </Stack>

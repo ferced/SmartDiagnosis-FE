@@ -51,11 +51,15 @@ axiosInstance.interceptors.response.use(
     const { response } = error;
     if (!response) return Promise.reject(error);
     const body = response.data;
+    // A throttled response (429) says when to retry in its Retry-After
+    // header; keep it, since the header is not part of the body.
+    const retryAfter = response.headers?.['retry-after'];
+    const extra = { status: response.status, ...(retryAfter && { retryAfter }) };
     // eslint-disable-next-line prefer-promise-reject-errors -- callers read the body's fields
     return Promise.reject(
       body && typeof body === 'object'
-        ? { ...body, status: response.status }
-        : { error: body || 'Something went wrong', status: response.status }
+        ? { ...body, ...extra }
+        : { error: body || 'Something went wrong', ...extra }
     );
   }
 );

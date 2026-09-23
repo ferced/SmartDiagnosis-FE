@@ -117,27 +117,24 @@ export default function HistoryView() {
     [router]
   );
 
-  const handleDeleteRow = useCallback(
-    async (id: number) => {
-      try {
-        const token = sessionStorage.getItem('accessToken');
-        if (!token) throw new Error('No access token found');
+  const handleDeleteRow = useCallback(async (id: number) => {
+    try {
+      const token = sessionStorage.getItem('accessToken');
+      if (!token) throw new Error('No access token found');
 
-        await axios.delete(`${HOST_API}/conversation/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      await axios.delete(`${HOST_API}/conversation/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        setConversations((prev) => prev.filter((row) => row.id !== id));
-        setSelected([]);
-      } catch (err) {
-        console.error('Error deleting conversation:', err);
-        setError('Failed to delete conversation');
-      }
-    },
-    []
-  );
+      setConversations((prev) => prev.filter((row) => row.id !== id));
+      setSelected([]);
+    } catch (err) {
+      console.error('Error deleting conversation:', err);
+      setError('Failed to delete conversation');
+    }
+  }, []);
 
   const handleDeleteRows = useCallback(async () => {
     try {
@@ -155,9 +152,7 @@ export default function HistoryView() {
         )
       );
 
-      setConversations((prev) =>
-        prev.filter((row) => !selected.includes(row.id.toString()))
-      );
+      setConversations((prev) => prev.filter((row) => !selected.includes(row.id.toString())));
       setSelected([]);
     } catch (err) {
       console.error('Error deleting conversations:', err);
@@ -178,18 +173,16 @@ export default function HistoryView() {
     if (conversation.title) return conversation.title;
 
     const date = new Date(conversation.created_at);
-    return `Conversation ${conversation.id} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    return `Conversation ${
+      conversation.id
+    } - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   };
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'lg'}>
       <CustomBreadcrumbs
         heading="Conversation History"
-        links={[
-          { name: 'Dashboard', href: paths.dashboard.root },
-          { name: 'Chat', href: paths.dashboard.chat },
-          { name: 'History' },
-        ]}
+        links={[{ name: 'Dashboard', href: paths.dashboard.root }, { name: 'History' }]}
         sx={{
           mb: { xs: 3, md: 5 },
         }}
@@ -203,11 +196,7 @@ export default function HistoryView() {
               numSelected={selected.length}
               rowCount={conversations.length}
               onSelectAllRows={(checked) =>
-                setSelected(
-                  checked
-                    ? conversations.map((row) => row.id.toString())
-                    : []
-                )
+                setSelected(checked ? conversations.map((row) => row.id.toString()) : [])
               }
               action={
                 <Stack direction="row" spacing={1.5}>
@@ -228,10 +217,7 @@ export default function HistoryView() {
           )}
 
           <Scrollbar>
-            <Table
-              size={table.dense ? 'small' : 'medium'}
-              sx={{ minWidth: 800 }}
-            >
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 800 }}>
               <TableHeadCustom
                 order={order}
                 orderBy={orderBy}
@@ -240,11 +226,7 @@ export default function HistoryView() {
                 numSelected={selected.length}
                 onSort={table.onSort}
                 onSelectAllRows={(checked) =>
-                  setSelected(
-                    checked
-                      ? conversations.map((row) => row.id.toString())
-                      : []
-                  )
+                  setSelected(checked ? conversations.map((row) => row.id.toString()) : [])
                 }
               />
 
@@ -287,27 +269,19 @@ export default function HistoryView() {
                             onChange={(e) => {
                               const newSelected = e.target.checked
                                 ? [...selected, row.id.toString()]
-                                : selected.filter(
-                                    (id) => id !== row.id.toString()
-                                  );
+                                : selected.filter((id) => id !== row.id.toString());
                               setSelected(newSelected);
                             }}
                           />
                         </TableCell>
 
                         <TableCell>
-                          <Typography variant="subtitle2">
-                            {generateTitle(row)}
-                          </Typography>
+                          <Typography variant="subtitle2">{generateTitle(row)}</Typography>
                         </TableCell>
 
-                        <TableCell>
-                          {new Date(row.created_at).toLocaleString()}
-                        </TableCell>
+                        <TableCell>{new Date(row.created_at).toLocaleString()}</TableCell>
 
-                        <TableCell>
-                          {new Date(row.updated_at).toLocaleString()}
-                        </TableCell>
+                        <TableCell>{new Date(row.updated_at).toLocaleString()}</TableCell>
 
                         <TableCell align="right">
                           <Tooltip title="Delete">
@@ -341,11 +315,8 @@ export default function HistoryView() {
           count={conversations.length}
           page={page}
           rowsPerPage={rowsPerPage}
-          
           onPageChange={(event, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(event) =>
-            setRowsPerPage(Number(event.target.value))
-          }
+          onRowsPerPageChange={(event) => setRowsPerPage(Number(event.target.value))}
         />
       </Card>
 

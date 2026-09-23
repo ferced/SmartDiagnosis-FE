@@ -19,6 +19,9 @@ export const DAILY_LIMIT_MESSAGE =
 
 export const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
 
+export const LOGIN_THROTTLED_MESSAGE =
+  'Too many sign-in attempts. Please wait a few minutes and try again.';
+
 type ErrorBody = {
   error?: unknown;
   message?: unknown;
@@ -69,6 +72,51 @@ function messageForStatus(status: number, data: unknown, fallback: string): stri
   }
 
   return bodyMessage || fallback;
+}
+
+export function getErrorStatus(err: unknown): number | null {
+  if (axios.isAxiosError(err)) return err.response?.status ?? null;
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status === 'number' ? status : null;
+}
+
+// Retry-After is either a number of seconds or an HTTP date.
+function parseRetryAfter(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return seconds > 0 ? seconds : null;
+  const date = Date.parse(value);
+  if (Number.isNaN(date)) return null;
+  const fromDate = Math.ceil((date - Date.now()) / 1000);
+  return fromDate > 0 ? fromDate : null;
+}
+
+// Seconds to wait before retrying a throttled (429) request: the body's
+// `retryAfterSeconds` (POST /auth/login sends it), else the Retry-After
+// header. Null when the response says neither.
+export function getRetryAfterSeconds(err: unknown): number | null {
+  if (axios.isAxiosError(err)) {
+    const body = err.response?.data as { retryAfterSeconds?: unknown } | undefined;
+    return (
+      parseRetryAfter(body?.retryAfterSeconds) ??
+      parseRetryAfter(err.response?.headers?.['retry-after'])
+    );
+  }
+  const body = err as { retryAfterSeconds?: unknown; retryAfter?: unknown } | null;
+  return parseRetryAfter(body?.retryAfterSeconds) ?? parseRetryAfter(body?.retryAfter);
+}
+
+// The sign-in throttle's 429 (too many attempts from this address or on this
+// account). Every other 429 is the daily analysis limit — see
+// messageForStatus — so this is only for the login screen.
+export function loginThrottledMessage(err: unknown): string {
+  const seconds = getRetryAfterSeconds(err);
+  if (!seconds) return LOGIN_THROTTLED_MESSAGE;
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return `Too many sign-in attempts. Try again in ${minutes} ${
+    minutes === 1 ? 'minute' : 'minutes'
+  }.`;
 }
 
 export function getErrorMessage(err: unknown, fallback: string = DEFAULT_MESSAGE): string {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -11,7 +11,7 @@ import { useBoolean } from 'src/hooks/use-boolean';
 
 import { isAfter, isBetween } from 'src/utils/format-time';
 
-import { FILE_TYPE_OPTIONS } from 'src/_mock';
+import { fetchDocuments, deleteDocument, uploadDocuments } from 'src/api/documents';
 
 import Iconify from 'src/components/iconify';
 import { useSnackbar } from 'src/components/snackbar';
@@ -22,13 +22,30 @@ import { useSettingsContext } from 'src/components/settings';
 import { useTable, getComparator } from 'src/components/table';
 
 import { IFile, IFileFilters, IFileFilterValue } from 'src/types/file';
-import { fetchDocuments, uploadDocuments, deleteDocument } from 'src/api/documents';
 
 import FileManagerTable from '../file-manager-table';
 import FileManagerFilters from '../file-manager-filters';
 import FileManagerGridView from '../file-manager-grid-view';
 import FileManagerFiltersResult from '../file-manager-filters-result';
 import FileManagerNewFolderDialog from '../file-manager-new-folder-dialog';
+
+// ----------------------------------------------------------------------
+
+// File types offered by the type filter (see fileFormat in file-thumbnail).
+const FILE_TYPE_OPTIONS = [
+  'folder',
+  'txt',
+  'zip',
+  'audio',
+  'image',
+  'video',
+  'word',
+  'excel',
+  'powerpoint',
+  'pdf',
+  'photoshop',
+  'illustrator',
+];
 
 // ----------------------------------------------------------------------
 
