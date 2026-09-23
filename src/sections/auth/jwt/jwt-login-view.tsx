@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
@@ -89,7 +88,8 @@ export default function JwtLoginView() {
 
       {/* No self-registration: the API has no /auth/register, accounts are admin-created. */}
       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-        Accounts are created by an administrator. Ask yours for access.
+        Accounts are created by an administrator. Ask yours for access, or to reset a forgotten
+        password.
       </Typography>
     </Stack>
   );
@@ -113,10 +113,6 @@ export default function JwtLoginView() {
         }}
       />
 
-      <Link variant="body2" color="inherit" underline="always" sx={{ alignSelf: 'flex-end' }}>
-        Forgot password?
-      </Link>
-
       <LoadingButton
         fullWidth
         color="inherit"
@@ -133,10 +129,6 @@ export default function JwtLoginView() {
   return (
     <>
       {renderHead}
-
-      {/* <Alert severity="info" sx={{ mb: 3 }}>
-        Use email : <strong>admin@ferced.com</strong> / password :<strong> demo1234</strong>
-      </Alert> */}
 
       {sessionExpired && !errorMsg && (
         <Alert severity="info" sx={{ mb: 3 }}>
