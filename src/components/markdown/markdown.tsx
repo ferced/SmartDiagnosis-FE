@@ -1,10 +1,6 @@
-/* eslint-disable perfectionist/sort-imports */
-import 'src/utils/highlight';
-
 // markdown plugins
 import remarkGfm from 'remark-gfm';
 import ReactMarkdown from 'react-markdown';
-import rehypeHighlight from 'rehype-highlight';
 
 import Link from '@mui/material/Link';
 
@@ -34,12 +30,15 @@ import { MarkdownProps } from './types';
 //
 // remarkGfm also moved to remarkPlugins, where it belongs — it was being passed
 // as a rehype plugin and only worked by accident.
+//
+// Syntax highlighting (rehype-highlight + the whole of highlight.js, ~1 MB) was
+// removed too: the content is clinical prose, never code, and it was the
+// largest chunk in the bundle. Do not add rehype plugins that re-parse raw HTML.
 export default function Markdown({ sx, ...other }: MarkdownProps) {
   return (
     <StyledMarkdown sx={sx}>
       <ReactMarkdown
         remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
-        rehypePlugins={[rehypeHighlight]}
         components={components}
         {...other}
       />
