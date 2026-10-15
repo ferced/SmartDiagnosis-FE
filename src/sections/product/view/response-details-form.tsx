@@ -40,6 +40,7 @@ import { varFade } from 'src/components/animate';
 
 import TreatmentPlan from './TreatmentPlan';
 import RareDiseasePanel from './RareDiseasePanel';
+import { normalizePatientAge } from './patient-age';
 import DrugInteractionAlert from './DrugInteractionAlert';
 import EvidenceLinksSection from './EvidenceLinksSection';
 import ConfidenceCalibration from './ConfidenceCalibration';
@@ -191,9 +192,8 @@ export default function ResponseDetails({
       try {
         const payload = {
           originalPatientInfo: {
-            ...originalPatientInfo,
+            ...normalizePatientAge(originalPatientInfo),
             patientName: originalPatientInfo.patientName || '',
-            age: parseInt(originalPatientInfo.age, 10) || 0,
             gender: originalPatientInfo.gender || '',
             symptoms: originalPatientInfo.symptoms || '',
             medicalHistory: originalPatientInfo.medicalHistory || '',
@@ -276,9 +276,8 @@ export default function ResponseDetails({
 
       const followUpRequest = {
         originalPatientInfo: {
-          ...originalPatientInfo,
+          ...normalizePatientAge(originalPatientInfo),
           patientName: originalPatientInfo.patientName || '',
-          age: parseInt(originalPatientInfo.age, 10) || 0,
           gender: originalPatientInfo.gender || '',
           symptoms: originalPatientInfo.symptoms || '',
           medicalHistory: originalPatientInfo.medicalHistory || '',
