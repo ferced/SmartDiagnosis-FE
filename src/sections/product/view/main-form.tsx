@@ -20,6 +20,8 @@ import {
 
 import { RHFUpload, RHFTextField } from 'src/components/hook-form';
 
+import AgeFields from './age-fields';
+
 interface OpenAIConfig {
   apiKey: string;
   model: string;
@@ -95,7 +97,7 @@ export default function MainForm({
                   <RHFTextField name="patientName" label="Patient Name" />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <RHFTextField name="age" label="Age" type="number" />
+                  <AgeFields />
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <Controller

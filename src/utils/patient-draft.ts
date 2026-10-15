@@ -17,9 +17,14 @@ const TEXT_FIELDS = [
   'imageAnalysisType',
 ] as const;
 
-type TextField = (typeof TEXT_FIELDS)[number];
+// 0 is a real age (a baby under one year), so it is kept like any other value.
+const NUMBER_FIELDS = ['age', 'ageMonths', 'ageDays'] as const;
 
-export type PatientDraft = Partial<Record<TextField, string>> & { age?: number };
+type TextField = (typeof TEXT_FIELDS)[number];
+type NumberField = (typeof NUMBER_FIELDS)[number];
+
+export type PatientDraft = Partial<Record<TextField, string>> &
+  Partial<Record<NumberField, number>>;
 
 function pickDraft(values: Record<string, unknown>): PatientDraft {
   const draft: PatientDraft = {};
@@ -27,10 +32,12 @@ function pickDraft(values: Record<string, unknown>): PatientDraft {
     const value = values[field];
     if (typeof value === 'string' && value !== '') draft[field] = value;
   });
-  const age = Number(values.age);
-  if (values.age !== undefined && values.age !== '' && Number.isFinite(age) && age !== 0) {
-    draft.age = age;
-  }
+  NUMBER_FIELDS.forEach((field) => {
+    const value = values[field];
+    if (value === undefined || value === null || value === '') return;
+    const number = Number(value);
+    if (Number.isFinite(number)) draft[field] = number;
+  });
   return draft;
 }
 

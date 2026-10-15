@@ -38,6 +38,14 @@ import ClinicalDisclaimer from './ClinicalDisclaimer';
 import ResponseDetails from './response-details-form';
 import NoDifferentialPanel from './NoDifferentialPanel';
 import { DiagnosisData, DiagnosisResponseDetails } from './types';
+import {
+  MAX_AGE_DAYS,
+  showsAgeDays,
+  MAX_AGE_YEARS,
+  MAX_AGE_MONTHS,
+  showsAgeMonths,
+  normalizePatientAge,
+} from './patient-age';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -119,11 +127,13 @@ function LoadingSkeleton({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-// Field values of an empty case. `age` stays undefined (not 0 or '') so the
-// schema reports "Age is required" rather than a type error.
+// Field values of an empty case. The age fields stay undefined, not 0: 0 is a
+// real age (a baby under one year), so an empty age must not look like one.
 const EMPTY_CASE = {
   patientName: '',
   age: undefined,
+  ageMonths: undefined,
+  ageDays: undefined,
   gender: '',
   symptoms: '',
   medicalHistory: '',
@@ -153,7 +163,32 @@ export default function PatientForm() {
 
   const PatientSchema = Yup.object().shape({
     patientName: Yup.string().required('Patient name is required'),
-    age: Yup.number().positive().integer().required('Age is required'),
+    age: Yup.number()
+      .typeError('Age is required')
+      .required('Age is required')
+      .integer('Whole years; 0 for a baby under one')
+      .min(0, 'Age cannot be negative')
+      .max(MAX_AGE_YEARS, `Age must be ${MAX_AGE_YEARS} or less`),
+    // Months and days are optional and only checked while they are on screen;
+    // once hidden (the years changed) they are dropped from the submission.
+    ageMonths: Yup.number().when('age', {
+      is: showsAgeMonths,
+      then: (schema) =>
+        schema
+          .integer(`0 to ${MAX_AGE_MONTHS}`)
+          .min(0, `0 to ${MAX_AGE_MONTHS}`)
+          .max(MAX_AGE_MONTHS, `0 to ${MAX_AGE_MONTHS}`),
+      otherwise: (schema) => schema.strip(),
+    }),
+    ageDays: Yup.number().when('age', {
+      is: showsAgeDays,
+      then: (schema) =>
+        schema
+          .integer(`0 to ${MAX_AGE_DAYS}`)
+          .min(0, `0 to ${MAX_AGE_DAYS}`)
+          .max(MAX_AGE_DAYS, `0 to ${MAX_AGE_DAYS}`),
+      otherwise: (schema) => schema.strip(),
+    }),
     symptoms: Yup.string().required('Symptoms are required'),
     medicalHistory: Yup.string(),
     allergies: Yup.string(),
@@ -229,7 +264,8 @@ export default function PatientForm() {
   }, []);
 
   const onSubmit: SubmitHandler<{ [key: string]: any }> = async (data) => {
-    const { files, ...patientData } = data;
+    const { files, ...rest } = data;
+    const patientData = normalizePatientAge(rest);
     setOriginalPatientInfo(patientData);
     setDraftRestored(false);
     setIsLoading(true);
