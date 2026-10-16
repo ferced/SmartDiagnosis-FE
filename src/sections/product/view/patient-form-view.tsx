@@ -157,7 +157,9 @@ export default function PatientForm() {
     symptoms: Yup.string().required('Symptoms are required'),
     medicalHistory: Yup.string(),
     allergies: Yup.string(),
-    gender: Yup.string(),
+    // Required: the engine's symbolic checks rule out sex-incompatible
+    // diagnoses with it. The medical history stays optional.
+    gender: Yup.string().required('Gender is required'),
     currentMedications: Yup.string(),
     files: Yup.array().of(Yup.mixed()),
   });
