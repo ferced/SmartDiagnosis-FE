@@ -2,6 +2,7 @@ import { Box, Card, Chip, Alert, Stack, Button, Typography } from '@mui/material
 import { Science, NoteAlt, WarningAmber, AddCircleOutline } from '@mui/icons-material';
 
 import { DiagnosisData } from './types';
+import NextStepsPanel from './NextStepsPanel';
 
 interface Props {
   data: Partial<DiagnosisData>;
@@ -18,11 +19,12 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
   const abstained = Boolean(data.abstained);
   const workupFirst = Boolean(data.workup_first);
   const recommendedWorkup = data.recommended_workup || [];
+  const plan = data.investigation_plan || [];
   const followUpQuestions = data.follow_up_questions || [];
 
-  // Both gates can fire on one case: the evidence gate caps a differential
-  // that depends on a finding nobody has obtained, and the confidence gate
-  // then abstains. The abstention reason leads, and the work-up reason is
+  // Both gates can fire on one case: the evidence gate holds a differential
+  // that depends on a finding nobody has obtained as unconfirmed, and the
+  // confidence gate abstains when no diagnosis is likely enough. The abstention reason leads, and the work-up reason is
   // shown under it instead of being dropped (unless it just repeats it).
   const workupReason = data.workup_reason?.trim() || '';
   const showWorkupReason =
@@ -59,7 +61,7 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
         <Typography variant="body2">{body}</Typography>
         {abstained && data.top_confidence && (
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-            Top confidence reached: {data.top_confidence}
+            Highest likelihood reached: {data.top_confidence}
           </Typography>
         )}
         {showWorkupReason && (
@@ -72,7 +74,13 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
         )}
       </Alert>
 
-      {recommendedWorkup.length > 0 && (
+      {plan.length > 0 && (
+        <Box sx={{ mt: 2.5 }}>
+          <NextStepsPanel plan={plan} mustNotMiss={data.must_not_miss || []} />
+        </Box>
+      )}
+
+      {plan.length === 0 && recommendedWorkup.length > 0 && (
         <Box sx={{ mt: 2.5 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             Recommended investigations
@@ -102,7 +110,7 @@ export default function NoDifferentialPanel({ data, onReviseCase, onNewCase }: P
 
       <Stack direction="row" spacing={1.5} sx={{ mt: 3 }} flexWrap="wrap" useFlexGap>
         <Button variant="contained" startIcon={<NoteAlt />} onClick={onReviseCase}>
-          Revise case
+          Revise original case
         </Button>
         <Button
           variant="outlined"

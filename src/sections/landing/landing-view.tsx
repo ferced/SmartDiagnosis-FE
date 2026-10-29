@@ -39,7 +39,7 @@ const REFUSALS = [
   {
     n: '01',
     title: 'Close a diagnosis on a value nobody measured.',
-    body: 'Before a differential can be called, the engine checks which findings it depends on. If one was never measured, the diagnosis stays provisional, its confidence is capped at 40% and the answer becomes "work-up first", with the exact tests listed.',
+    body: 'Before a differential can be called, the engine checks which findings it depends on. If one was never measured, the diagnosis is shown as not confirmed, however likely, and the answer becomes "work-up first": the next test to do, and what each result would change.',
     label: 'Evidence gate',
     color: T.provisional,
   },
@@ -133,8 +133,8 @@ const EUROPE = [
 /**
  * Illustrative case for the hero. Each row shows a real mechanism of the
  * engine: a leading diagnosis with a verified PMID (26926407 is a real
- * PubMed record on acute bacterial prostatitis), a provisional one capped by
- * the evidence gate, and one discarded by the symbolic verifier's
+ * PubMed record on acute bacterial prostatitis), a provisional one the
+ * evidence gate holds as not confirmed, and one discarded by the symbolic verifier's
  * sex/anatomy rule. The interaction is a real, high-severity pair.
  */
 const CASE = {
@@ -149,8 +149,8 @@ const CASE = {
     },
     {
       name: 'Diverticulitis',
-      p: '40%',
-      state: 'Provisional · capped',
+      p: '22%',
+      state: 'Not confirmed · work-up first',
       color: T.provisional,
       notes: ['Work-up first: CT abdomen/pelvis, CBC, CRP'],
     },

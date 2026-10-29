@@ -50,6 +50,55 @@ export interface MissingInfo {
   reasoning: string;
 }
 
+// The three confidence dimensions are separate answers (see the backend's
+// confidence_semantics.go): `probability` is the diagnostic likelihood, this is
+// whether a result confirms it, and `etiology` is what causes it.
+export type ConfirmationStatus = 'suspected' | 'strongly_supported' | 'confirmed';
+
+export interface Etiology {
+  cause: string;
+  status?: 'unknown' | 'suspected' | 'confirmed' | string;
+  likelihood?: string;
+  basis?: string;
+}
+
+// One step of the investigation plan — the only place the response lists tests.
+export interface Investigation {
+  test: string;
+  priority: 'immediate' | 'conditional' | 'later' | string;
+  purpose?: string;
+  addresses?: 'diagnosis' | 'etiology' | 'alternative' | 'baseline' | 'monitoring' | string;
+  for_diagnosis?: string;
+  trigger_condition?: string;
+  changes_management?: boolean;
+  time_horizon?: string;
+  if_positive?: string;
+  if_negative?: string;
+}
+
+export interface MustNotMiss {
+  diagnosis: string;
+  why_it_matters?: string;
+  how_to_exclude?: string;
+}
+
+export type AssessmentState = 'abstained' | 'workup_first' | 'working_diagnosis' | 'confirmed';
+
+// Clinical information added after the initial presentation, oldest first.
+export interface CaseUpdate {
+  text: string;
+  addedAt?: string;
+}
+
+// One state of the case, kept so earlier assessments stay visible.
+export interface TimelineEntry {
+  label: string;
+  addedText?: string;
+  at: string;
+  assessmentState?: string;
+  diagnoses: { diagnosis: string; probability: string; confirmation_status?: string }[];
+}
+
 export interface PatientCase {
   id: number;
   user_id: number;
@@ -102,7 +151,12 @@ export interface GuidelineRef {
 export interface DiagnosisDetail {
   diagnosis: string;
   treatment: string;
+  // Diagnostic likelihood (0–100%), never a confirmation score.
   probability: string;
+  confirmation_status?: ConfirmationStatus | string;
+  confirmed_by?: string;
+  status_note?: string;
+  etiology?: Etiology;
   prevalence?: string;
   discriminatorSymptoms?: string[];
   recommendedTests?: string[];
@@ -143,6 +197,11 @@ export interface DiagnosisData {
   workup_reason?: string;
   recommended_workup?: string[];
   history_sufficient?: boolean;
+  // prioritised next steps, dangerous alternatives, where the case stands
+  investigation_plan?: Investigation[];
+  must_not_miss?: MustNotMiss[];
+  urgency?: 'emergency' | 'urgent' | 'routine' | string;
+  assessment_state?: AssessmentState | string;
 }
 
 export interface ArchivedDiagnosis {
@@ -172,4 +231,6 @@ export interface ResponseDetailsProps {
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setResponseDetails: React.Dispatch<React.SetStateAction<DiagnosisResponseDetails | null>>;
+  // A follow-up round produced a new state of the case (for the timeline).
+  onAssessment?: (label: string, data: DiagnosisData | undefined) => void;
 }
