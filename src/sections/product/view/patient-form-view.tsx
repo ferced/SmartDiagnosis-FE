@@ -5,7 +5,7 @@ import { useRef, useState, useEffect } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
-import { NoteAlt, AddCircleOutline } from '@mui/icons-material';
+import { NoteAlt, PostAdd, AddCircleOutline } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -15,6 +15,7 @@ import {
   Button,
   Skeleton,
   Snackbar,
+  TextField,
   Typography,
   LinearProgress,
   CircularProgress,
@@ -34,10 +35,11 @@ import { OpenAIConfigModal } from 'src/components/openai-config';
 import ChatBox from './ChatBox';
 import MainForm from './main-form';
 import DailyUsage from './DailyUsage';
+import CaseTimeline from './CaseTimeline';
 import ClinicalDisclaimer from './ClinicalDisclaimer';
 import ResponseDetails from './response-details-form';
 import NoDifferentialPanel from './NoDifferentialPanel';
-import { DiagnosisData, DiagnosisResponseDetails } from './types';
+import { CaseUpdate, DiagnosisData, TimelineEntry, DiagnosisResponseDetails } from './types';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -119,6 +121,90 @@ function LoadingSkeleton({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+// One timeline entry from a response: the differential as it stood then.
+function snapshot(label: string, data: Partial<DiagnosisData> | undefined, addedText?: string): TimelineEntry {
+  return {
+    label,
+    addedText,
+    at: new Date().toISOString(),
+    assessmentState: data?.assessment_state,
+    diagnoses: (data?.common_diagnoses || []).map((d) => ({
+      diagnosis: d.diagnosis,
+      probability: d.probability,
+      confirmation_status: d.confirmation_status,
+    })),
+  };
+}
+
+function responseData(details: any): Partial<DiagnosisData> {
+  return details?.diagnoses || details?.followUpResponse || {};
+}
+
+// "Add new clinical information" box. New results and findings are added to
+// the case over time and the assessment is updated; the original presentation
+// is not edited. That is what "Revise original case" is for.
+function AddFindingsBox({
+  onSubmit,
+  onCancel,
+  updating,
+  disabled,
+}: {
+  onSubmit: (text: string) => Promise<boolean>;
+  onCancel: () => void;
+  updating: boolean;
+  disabled: boolean;
+}) {
+  const [text, setText] = useState('');
+  const submit = async () => {
+    if (!text.trim()) return;
+    if (await onSubmit(text.trim())) setText('');
+  };
+  return (
+    <Card sx={{ mt: 3, p: 2.5 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        Add new clinical information
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+        New results, examination findings or the course since the last assessment. They are added
+        to the case in order; the original presentation stays as entered.
+      </Typography>
+      <TextField
+        fullWidth
+        multiline
+        minRows={2}
+        placeholder="Add new clinical information… e.g. CT pulmonary angiography: filling defects in the right lower lobe segmental arteries"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        disabled={updating || disabled}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit();
+        }}
+      />
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1.5 }}>
+        <Button
+          variant="contained"
+          startIcon={updating ? <CircularProgress size={18} color="inherit" /> : <PostAdd />}
+          onClick={submit}
+          disabled={!text.trim() || updating || disabled}
+        >
+          {updating ? 'Updating assessment…' : 'Update assessment'}
+        </Button>
+        {updating && (
+          <Button color="inherit" size="small" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        {updating && (
+          <Typography variant="caption" color="text.secondary">
+            Re-running the full assessment with everything entered so far — this can take a few
+            minutes.
+          </Typography>
+        )}
+      </Stack>
+    </Card>
+  );
+}
+
 // Field values of an empty case. `age` stays undefined (not 0 or '') so the
 // schema reports "Age is required" rather than a type error.
 const EMPTY_CASE = {
@@ -150,6 +236,17 @@ export default function PatientForm() {
 
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig | null>(null);
   const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
+
+  // Longitudinal case state: information added after the first assessment, and
+  // every state the assessment went through. Kept across "Revise original
+  // case"; cleared by "New case".
+  const [caseUpdates, setCaseUpdates] = useState<CaseUpdate[]>([]);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  // Bumped on each update so the results view starts fresh for the new state
+  // (its follow-up rounds and conclusion belonged to the previous one).
+  const [assessmentVersion, setAssessmentVersion] = useState(0);
+  const [updating, setUpdating] = useState(false);
+  const updateAbortRef = useRef<AbortController | null>(null);
 
   const PatientSchema = Yup.object().shape({
     patientName: Yup.string().required('Patient name is required'),
@@ -214,7 +311,13 @@ export default function PatientForm() {
 
   // Leaving the page aborts the submission instead of letting it land on an
   // unmounted view.
-  useEffect(() => () => submitAbortRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      submitAbortRef.current?.abort();
+      updateAbortRef.current?.abort();
+    },
+    []
+  );
 
   useEffect(() => {
     const savedConfig = sessionStorage.getItem('openaiConfig');
@@ -264,6 +367,7 @@ export default function PatientForm() {
       const formattedData = {
         ...patientData,
         conversationId,
+        ...(caseUpdates.length > 0 && { caseUpdates }),
         ...(openAIConfig && { openaiConfig: openAIConfig }),
       };
 
@@ -275,6 +379,14 @@ export default function PatientForm() {
       });
 
       setResponseDetails(response.data);
+      setTimeline((prev) => [
+        ...prev,
+        snapshot(
+          prev.length === 0 ? 'Initial assessment' : 'Original case revised',
+          responseData(response.data)
+        ),
+      ]);
+      setAssessmentVersion((v) => v + 1);
       // Persist the latest response so the "How it works" page can render the
       // real reasoning chain (pipeline stages) for this case. Best-effort.
       try {
@@ -286,8 +398,8 @@ export default function PatientForm() {
       setIsLoading(false);
       setResponseReceived(true);
       setUsageRefreshKey((k) => k + 1);
-      // The input is deliberately NOT cleared here: "Revise case" returns to
-      // the form with it intact, and only "New case" empties it.
+      // The input is deliberately NOT cleared here: "Revise original case"
+      // returns to the form with it intact, and only "New case" empties it.
     } catch (err: any) {
       setIsLoading(false);
       // Cancelled by the clinician: back to the form, input intact, no error.
@@ -317,14 +429,76 @@ export default function PatientForm() {
     setError(null);
   };
 
-  // Back to the form with every field as it was submitted. The result itself
-  // is kept server-side in History.
+  // Back to the form with every field as it was submitted, to correct the
+  // original presentation. Information added later and the timeline are kept
+  // and go with the resubmission. The result itself is kept in History.
   const handleReviseCase = () => {
+    updateAbortRef.current?.abort();
     clearResult();
+  };
+
+  // Adds new clinical information to the case and re-runs the full assessment
+  // on everything entered so far, in the same conversation.
+  const handleAddFindings = async (text: string): Promise<boolean> => {
+    const token = sessionStorage.getItem('accessToken');
+    if (!token || !responseDetails) {
+      setError('No access token found in sessionStorage');
+      return false;
+    }
+    const nextUpdates = [...caseUpdates, { text, addedAt: new Date().toISOString() }];
+
+    updateAbortRef.current?.abort();
+    const controller = new AbortController();
+    updateAbortRef.current = controller;
+    setUpdating(true);
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        `${HOST_API}/diagnoses/submit`,
+        {
+          ...originalPatientInfo,
+          conversationId: responseDetails.conversationId,
+          caseUpdates: nextUpdates,
+          ...(openAIConfig && { openaiConfig: openAIConfig }),
+        },
+        { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
+      );
+      setCaseUpdates(nextUpdates);
+      setResponseDetails(response.data);
+      setTimeline((prev) => [...prev, snapshot('New findings', responseData(response.data), text)]);
+      setAssessmentVersion((v) => v + 1);
+      setActiveStep(0);
+      setShowFollowUp(false);
+      setFollowUpAnswers([]);
+      setUsageRefreshKey((k) => k + 1);
+      try {
+        sessionStorage.setItem('lastDiagnosisResponse', JSON.stringify(response.data));
+      } catch (e) {
+        /* storage may be unavailable (private mode / quota) — non-fatal */
+      }
+      return true;
+    } catch (err: any) {
+      if (!isRequestCancelled(err)) {
+        setError(getErrorMessage(err, 'The assessment could not be updated. Please try again.'));
+      }
+      return false;
+    } finally {
+      setUpdating(false);
+      setIsLoading(false);
+      if (updateAbortRef.current === controller) updateAbortRef.current = null;
+    }
+  };
+
+  // A follow-up round inside the results view is a new state of the case too.
+  const handleAssessmentRound = (label: string, data: DiagnosisData | undefined) => {
+    setTimeline((prev) => [...prev, snapshot(label, data)]);
   };
 
   const handleNewCase = () => {
     setConfirmNewCase(false);
+    updateAbortRef.current?.abort();
+    setCaseUpdates([]);
+    setTimeline([]);
     clearResult();
     setOriginalPatientInfo({});
     setDraftRestored(false);
@@ -360,8 +534,10 @@ export default function PatientForm() {
     return null;
   };
 
-  const responseData: Partial<DiagnosisData> =
-    responseDetails?.diagnoses || responseDetails?.followUpResponse || {};
+  const currentData: Partial<DiagnosisData> = responseData(responseDetails);
+  // Every request about this case carries what was added to it over time.
+  const casePatientInfo =
+    caseUpdates.length > 0 ? { ...originalPatientInfo, caseUpdates } : originalPatientInfo;
 
   const fadeIn = varFade().in;
 
@@ -432,7 +608,7 @@ export default function PatientForm() {
                 useFlexGap
               >
                 <Button variant="outlined" color="inherit" startIcon={<NoteAlt />} onClick={handleReviseCase} disabled={isLoading}>
-                  Revise case
+                  Revise original case
                 </Button>
                 <Button
                   variant="contained"
@@ -443,7 +619,9 @@ export default function PatientForm() {
                   New case
                 </Button>
               </Stack>
+              <CaseTimeline entries={timeline} />
               <ResponseDetails
+                key={assessmentVersion}
                 responseDetails={responseDetails}
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
@@ -451,21 +629,28 @@ export default function PatientForm() {
                 setShowFollowUp={setShowFollowUp}
                 followUpAnswers={followUpAnswers}
                 setFollowUpAnswers={setFollowUpAnswers}
-                originalPatientInfo={originalPatientInfo}
+                originalPatientInfo={casePatientInfo}
                 isLoading={isLoading}
                 setIsLoading={setIsLoading}
                 setResponseDetails={setResponseDetails}
+                onAssessment={handleAssessmentRound}
                 openAIConfig={openAIConfig}
+              />
+              <AddFindingsBox
+                onSubmit={handleAddFindings}
+                onCancel={() => updateAbortRef.current?.abort()}
+                updating={updating}
+                disabled={isLoading && !updating}
               />
               <ChatBox
                 question={question}
                 setQuestion={setQuestion}
-                originalPatientInfo={originalPatientInfo}
+                originalPatientInfo={casePatientInfo}
                 initialResponse={getActiveDiagnosis()}
                 openAIConfig={openAIConfig}
                 conversationId={responseDetails.conversationId}
               />
-              <ClinicalDisclaimer text={responseData.disclaimer} />
+              <ClinicalDisclaimer text={currentData.disclaimer} />
             </m.div>
           )}
 
@@ -478,12 +663,19 @@ export default function PatientForm() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
+              <CaseTimeline entries={timeline} />
               <NoDifferentialPanel
-                data={responseData}
+                data={currentData}
                 onReviseCase={handleReviseCase}
                 onNewCase={handleNewCase}
               />
-              <ClinicalDisclaimer text={responseData.disclaimer} />
+              <AddFindingsBox
+                onSubmit={handleAddFindings}
+                onCancel={() => updateAbortRef.current?.abort()}
+                updating={updating}
+                disabled={isLoading && !updating}
+              />
+              <ClinicalDisclaimer text={currentData.disclaimer} />
             </m.div>
           )}
         </AnimatePresence>

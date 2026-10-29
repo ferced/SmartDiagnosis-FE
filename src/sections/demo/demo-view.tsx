@@ -62,8 +62,8 @@ type Tone = 'ok' | 'hold' | 'stop';
 const TONE: Record<Tone, string> = { ok: T.verified, hold: T.provisional, stop: T.ruledOut };
 
 const DIFFERENTIAL = [
-  { name: 'Non-Hodgkin lymphoma', model: '62%', shown: '40%', tone: 'hold' as Tone, note: 'Capped. Depends on lymph node histology, not done.' },
-  { name: 'Classical Hodgkin lymphoma', model: '44%', shown: '40%', tone: 'hold' as Tone, note: 'Capped. Depends on lymph node histology, not done.' },
+  { name: 'Non-Hodgkin lymphoma', model: '62%', shown: '62%', tone: 'hold' as Tone, note: 'Most likely, not confirmed. Depends on lymph node histology, not done.' },
+  { name: 'Classical Hodgkin lymphoma', model: '44%', shown: '44%', tone: 'hold' as Tone, note: 'Not confirmed. Depends on lymph node histology, not done.' },
   { name: 'Tuberculous lymphadenitis', model: '21%', shown: '21%', tone: 'hold' as Tone, note: 'Depends on IGRA and mycobacterial culture.' },
   { name: 'Metastatic head and neck squamous cell carcinoma', model: '12%', shown: '12%', tone: 'hold' as Tone, note: 'Depends on ENT examination and histology.' },
   { name: 'Castleman disease', model: '3%', shown: '3%', tone: 'hold' as Tone, note: 'Rare. Kept on the list; histology also decides it.' },
@@ -130,12 +130,12 @@ const STAGES: Stage[] = [
   {
     id: 'Evidence gate',
     tone: 'hold',
-    summary: 'Every leading candidate depends on histology that has not been done. They stay provisional; the two lymphomas are capped at 40%.',
+    summary: 'Every leading candidate depends on histology that has not been done. They stay provisional: shown at the likelihood the evidence supports, marked as not confirmed.',
   },
   {
     id: 'Confidence gate',
-    tone: 'stop',
-    summary: 'The top candidate sits at 40%, below the 45% threshold. No diagnosis is released: the answer becomes a work-up plan.',
+    tone: 'hold',
+    summary: 'Non-Hodgkin lymphoma leads at 62%, clear of the next candidate, so the engine does not abstain. It is not confirmed, so no treatment plan is released: the answer is the work-up that would confirm it.',
   },
   {
     id: 'Audit trail',
@@ -309,7 +309,7 @@ function Response() {
         <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
           <Dot color={T.provisional} />
           <Mono color={T.provisional} sx={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: 11.5 }}>
-            Work-up first · no diagnosis released
+            Work-up first · nothing confirmed yet
           </Mono>
         </Stack>
         <Typography sx={{ fontFamily: T.serif, fontSize: { xs: 24, md: 28 }, lineHeight: 1.2, letterSpacing: '-0.01em', color: T.ink }}>
@@ -320,7 +320,7 @@ function Response() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
         {/* Differential */}
         <Box sx={{ p: { xs: 2.5, md: 4 }, borderRight: { md: `1px solid ${T.hairline}` }, borderBottom: { xs: `1px solid ${T.hairline}`, md: 'none' } }}>
-          <SectionLabel>Differential · provisional</SectionLabel>
+          <SectionLabel>Differential · likelihood · not confirmed</SectionLabel>
           <Stack divider={<Box sx={{ borderTop: `1px solid ${T.hairline}` }} />}>
             {DIFFERENTIAL.map((d) => (
               <Box key={d.name} sx={{ py: 1.5 }}>

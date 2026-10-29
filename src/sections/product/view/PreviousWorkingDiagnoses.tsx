@@ -136,7 +136,7 @@ const PreviousWorkingDiagnoses: React.FC<PreviousWorkingDiagnosesProps> = ({
 
                           <Box display="flex" alignItems="center" gap={2}>
                             <Chip
-                              label={`Probability: ${diagnosis.probability}`}
+                              label={`Likelihood: ${diagnosis.probability}`}
                               size="small"
                               color="default"
                               variant="filled"
