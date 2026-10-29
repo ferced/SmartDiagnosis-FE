@@ -6,19 +6,16 @@ import {
   Grid,
   Stack,
   Button,
-  Select,
   MenuItem,
   useTheme,
   CardHeader,
-  InputLabel,
   Typography,
-  FormControl,
   ToggleButton,
   ToggleButtonGroup,
   CircularProgress,
 } from '@mui/material';
 
-import { RHFUpload, RHFTextField } from 'src/components/hook-form';
+import { RHFUpload, RHFSelect, RHFTextField } from 'src/components/hook-form';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -98,19 +95,10 @@ export default function MainForm({
                   <RHFTextField name="age" label="Age" type="number" />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Controller
-                    name="gender"
-                    control={methods.control}
-                    render={({ field }) => (
-                      <FormControl fullWidth variant="outlined">
-                        <InputLabel id="gender-label">Gender</InputLabel>
-                        <Select {...field} labelId="gender-label" label="Gender" defaultValue="">
-                          <MenuItem value="male">Male</MenuItem>
-                          <MenuItem value="female">Female</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
+                  <RHFSelect name="gender" label="Gender">
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                  </RHFSelect>
                 </Grid>
               </Grid>
 
